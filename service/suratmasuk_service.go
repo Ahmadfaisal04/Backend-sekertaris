@@ -7,26 +7,31 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 )
 
-func AddSuratKeluar(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func AddSuratMasuk(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if r.Method == "POST" {
 
-		var surat model.SuratKeluar
+		var surat model.SuratMasuk
 		surat.Nomor = r.FormValue("nomor")
 		surat.Tanggal = r.FormValue("tanggal")
 		surat.Perihal = r.FormValue("perihal")
-		surat.Ditujukan = r.FormValue("ditujukan")
+		surat.Asal = r.FormValue("asal")
 
-		parsedDate, err := time.Parse("2006-01-02", surat.Tanggal)
-		if err != nil {
-			http.Error(w, `{"Error Message": "Invalid date format, expected YYYY-MM-DD"}`, http.StatusBadRequest)
+		// Validasi bahwa tanggal tidak boleh kosong
+		if surat.Tanggal == "" {
+			http.Error(w, `{"Error Message": "Tanggal is required"}`, http.StatusBadRequest)
 			return
 		}
 
-		// Mengambil file yang diunggah
+		parsedDate, err := time.Parse("2006-01-02", surat.Tanggal)
+		if err != nil {
+			panic(err)
+			// http.Error(w, `{"Error Message": "Invalid date format, expected YYYY-MM-DD"}`, http.StatusBadRequest)
+			// return
+		}
+
 		file, header, err := r.FormFile("file")
 		if err != nil {
 			http.Error(w, "Unable to get file from form", http.StatusBadRequest)
@@ -35,7 +40,7 @@ func AddSuratKeluar(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		defer file.Close()
 
 		// Menentukan path penyimpanan file di direktori static
-		staticPath := "./static/suratkeluar/"
+		staticPath := "./static/suratmasuk/"
 		err = os.MkdirAll(staticPath, os.ModePerm)
 		if err != nil {
 			http.Error(w, "Unable to create static directory", http.StatusInternalServerError)
@@ -43,7 +48,7 @@ func AddSuratKeluar(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		}
 
 		// Membuat path lengkap untuk menyimpan file
-		filePath := filepath.Join(staticPath, header.Filename)
+		filePath := staticPath + header.Filename
 
 		// Membuat file di path yang telah ditentukan
 		outFile, err := os.Create(filePath)
@@ -59,9 +64,11 @@ func AddSuratKeluar(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			return
 		}
 
-		// Menambahkan judul file dan path file ke dalam struktur SuratKeluar
+		// Menambahkan judul file dan path file ke dalam struktur SuratMasuk
 		surat.Title = header.Filename
 		surat.File = filePath
-		repository.AddSuratKeluar(w, r, surat, parsedDate, db)
+
+		// Panggil repository untuk menyimpan data surat masuk
+		repository.AddSuratMasuk(db, w, r, surat, parsedDate)
 	}
 }

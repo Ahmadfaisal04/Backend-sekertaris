@@ -3,38 +3,41 @@ package main
 import (
 	"Sekertaris/config"
 	"Sekertaris/controller"
-	"Sekertaris/repository"
-	"Sekertaris/service"
 	"fmt"
-	"log"
 	"net/http"
+	"os"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
 )
 
 func main() {
-	// Koneksi ke database
-	db := config.ConnectDB()
-	if db == nil {
-		log.Fatal("Failed to connect to database")
+
+	errEnv := godotenv.Load()
+	if errEnv != nil {
+		panic(errEnv)
 	}
-	fmt.Println("Connected to database")
+	port := os.Getenv("APP_PORT")
 
-	// Inisialisasi repository, service, dan controller
-	suratKeluarRepository := repository.NewSuratKeluarRepository(db)
-	suratKeluarService := service.AddSuratKeluar(suratKeluarRepository)
-	suratKeluarController := controller.NewSuratKeluarController(suratKeluarService)
+	db, err := config.ConnectDB()
+	if err != nil {
+		panic(err)
+	}
 
-	// Router menggunakan httprouter
+	fmt.Print("running on port: ", port)
+
 	router := httprouter.New()
+	router.POST("/api/suratmasuk", controller.AddSuratMasuk(db))
+	router.POST("/api/suratkeluar", controller.AddSuratKeluar(db))
+	
 
-	// Rute untuk Surat Keluar
-	router.POST("/surat-keluar", suratKeluarController.CreateSuratKeluar)
-	router.PUT("/surat-keluar/:id", suratKeluarController.UpdateSuratKeluar)
+	server := http.Server{
+		Addr:    ":" + port,
+		Handler: router,
+	}
 
-	// Jalankan server
-	port := ":8080"
-	fmt.Println("Server running on port", port)
-	log.Fatal(http.ListenAndServe(port, router))
+	errServer := server.ListenAndServe()
+	if errServer != nil {
+		panic(errServer)
+	}
 }

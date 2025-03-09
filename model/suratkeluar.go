@@ -1,11 +1,11 @@
 package model
 
 type SuratKeluar struct {
-	ID         string	
-	Nomor      string
-	Tanggal    string
-	Perihal    string
-	Ditujukan  string
-	Title_file string
-	File       string
+	ID        int    `json:"id"`
+	Nomor     string `json:"nomor"`
+	Tanggal   string `json:"tanggal"`
+	Perihal   string `json:"perihal"`
+	Ditujukan string `json:"ditujukan"`
+	Title     string `json:"title"`
+	File      string `json:"file"`
 }

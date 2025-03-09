@@ -8,9 +8,9 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func AddSuratKeluar(db *sql.DB) httprouter.Handle {
+func AddSuratMasuk(db *sql.DB) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		service.AddSuratKeluar(w, r, db)
-
+		service.AddSuratMasuk(w, r, db)
+		
 	}
 }
