@@ -1,26 +1,32 @@
 package repository
 
 import (
-	"database/sql"
 	"Sekertaris/model"
+	"database/sql"
+	"log"
+	"net/http"
+	"time"
 )
 
-type UserRepository struct {
-	DB *sql.DB
+func AddSuratMasuk(db *sql.DB, w http.ResponseWriter, r *http.Request, surat model.SuratMasuk, parsedDate time.Time) {
+	query := `INSERT INTO suratmasuk (nomor, tanggal, perihal, asal, title, file) VALUES (?, ?, ?, ?, ?, ?)`
+	_, err := db.Exec(query, surat.Nomor, parsedDate, surat.Perihal, surat.Asal, surat.Title, surat.File)
+	if err != nil {
+		http.Error(w, `{"Error Message": "Error inserting data"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message": "Surat Masuk created successfully"}`))
 }
 
-func NewUserRepository(db *sql.DB) *UserRepository {
-	return &UserRepository{DB: db}
-}
-
-func (r *UserRepository) CreateUser(user model.User) error {
-	_, err := r.DB.Exec("INSERT INTO user (email, nama, handphone, angkatan, password, role) VALUES (?, ?, ?, ?, ?, ?)",
-		user.Email, user.Nama, user.Handphone, user.Angkatan, user.Password, user.Role)
-	return err
-}
-
-func (r *UserRepository) GetUserByEmail(email string) (*model.User, error) {
-	var user model.User
-	err := r.DB.QueryRow("SELECT email, password, role FROM user WHERE email = ?", email).Scan(&user.Email, &user.Password, &user.Role)
-	return &user, err
+func GetSuratMasuk(db *sql.DB, w http.ResponseWriter, r *http.Request) {
+	rows, err := db.Query("SELECT id, nomor, tanggal, perihal, asal, title FROM suratmasuk")
+	if err != nil {
+		log.Println("Error retrieving surat masuk:", err)
+		http.Error(w, `{"Error Message": "Error retrieving surat masuk"}`, http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
 }
