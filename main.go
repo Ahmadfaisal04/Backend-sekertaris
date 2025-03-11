@@ -47,7 +47,6 @@ func main() {
 	router.GET("/api/suratkeluar/get/:id", suratKeluarController.GetSuratKeluarById)
 	router.PUT("/api/suratkeluar/:id", suratKeluarController.UpdateSuratKeluarByID)
 
-	//Route Surat Masuk
 	router.POST("/api/suratmasuk", controller.AddSuratMasuk(db))
 	router.GET("/api/suratmasuk/get", controller.GetSuratMasuk(db))
 	router.GET("/api/suratmasuk/get/:id", suratMasukController.GetSuratById)
