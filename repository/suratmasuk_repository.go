@@ -3,6 +3,7 @@ package repository
 import (
 	"Sekertaris/model"
 	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -17,16 +18,34 @@ func NewSuratMasukRepository(db *sql.DB) *SuratMasukRepository {
 }
 
 func AddSuratMasuk(db *sql.DB, w http.ResponseWriter, r *http.Request, surat model.SuratMasuk, parsedDate time.Time) {
+	// Query untuk memasukkan data
 	query := `INSERT INTO suratmasuk (nomor, tanggal, perihal, asal, title, file) VALUES (?, ?, ?, ?, ?, ?)`
-	_, err := db.Exec(query, surat.Nomor, parsedDate, surat.Perihal, surat.Asal, surat.Title, surat.File)
+	result, err := db.Exec(query, surat.Nomor, parsedDate, surat.Perihal, surat.Asal, surat.Title, surat.File)
 	if err != nil {
-		http.Error(w, `{"Error Message": "Error inserting data"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error": "Error inserting data"}`, http.StatusInternalServerError)
 		return
 	}
 
+	// Ambil ID dari data yang baru saja dimasukkan
+	lastInsertID, err := result.LastInsertId()
+	if err != nil {
+		http.Error(w, `{"error": "Error getting last insert ID"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Query untuk mengambil data yang baru saja dimasukkan
+	var newSurat model.SuratMasuk
+	query = `SELECT id, nomor, tanggal, perihal, asal, title, file FROM suratmasuk WHERE id = ?`
+	err = db.QueryRow(query, lastInsertID).Scan(&newSurat.Id, &newSurat.Nomor, &newSurat.Tanggal, &newSurat.Perihal, &newSurat.Asal, &newSurat.Title, &newSurat.File)
+	if err != nil {
+		http.Error(w, `{"error": "Error retrieving inserted data"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Set header dan kembalikan data sebagai JSON
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"message": "Surat Masuk created successfully"}`))
+	json.NewEncoder(w).Encode(newSurat)
 }
 
 func GetSuratMasuk(db *sql.DB) ([]model.SuratMasuk, error) {
@@ -119,4 +138,3 @@ func (r *SuratMasukRepository) DeleteSuratMasuk(nomor, perihal string) error {
 
 	return nil
 }
-
