@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -23,21 +24,90 @@ func NewSuratMasukController(service *service.SuratMasukService) *SuratMasukCont
 	return &SuratMasukController{service: service}
 }
 
-func AddSuratMasuk(db *sql.DB) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		service.AddSuratMasuk(w, r, db)
+func (c *SuratMasukController) AddSuratMasuk(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if r.Method == "POST" {
+		var surat model.SuratMasuk
+		surat.Nomor = r.FormValue("nomor")
+		surat.Tanggal = r.FormValue("tanggal")
+		surat.Perihal = r.FormValue("perihal")
+		surat.Asal = r.FormValue("asal")
+
+		// Validasi bahwa tanggal tidak boleh kosong
+		if surat.Tanggal == "" {
+			http.Error(w, `{"error": "Tanggal is required"}`, http.StatusBadRequest)
+			return
+		}
+
+		parsedDate, err := time.Parse("2006-01-02", surat.Tanggal)
+		if err != nil {
+			http.Error(w, `{"error": "Invalid date format, expected YYYY-MM-DD"}`, http.StatusBadRequest)
+			return
+		}
+
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			http.Error(w, `{"error": "Unable to get file from form"}`, http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		// Menentukan path penyimpanan file di direktori static
+		staticPath := "./static/suratmasuk/"
+		err = os.MkdirAll(staticPath, os.ModePerm)
+		if err != nil {
+			http.Error(w, `{"error": "Unable to create static directory"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// Membuat path lengkap untuk menyimpan file
+		filePath := staticPath + header.Filename
+
+		// Membuat file di path yang telah ditentukan
+		outFile, err := os.Create(filePath)
+		if err != nil {
+			http.Error(w, `{"error": "Unable to create file"}`, http.StatusInternalServerError)
+			return
+		}
+		defer outFile.Close()
+
+		_, err = io.Copy(outFile, file)
+		if err != nil {
+			http.Error(w, `{"error": "Error saving file"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// Menambahkan judul file dan path file ke dalam struktur SuratMasuk
+		surat.Title = header.Filename
+		surat.File = filePath
+
+		// Panggil service untuk menyimpan data surat masuk
+		newSurat, err := c.service.AddSuratMasuk(surat, parsedDate)
+		if err != nil {
+			http.Error(w, `{"error": "Error adding surat masuk"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// Kirim response JSON
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(newSurat)
 	}
 }
 
-func GetSuratMasuk(db *sql.DB) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		service.GetSuratMasuk(w, db)
+func (c *SuratMasukController) GetSuratMasuk(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	suratMasukList, err := c.service.GetSuratMasuk()
+	if err != nil {
+		http.Error(w, `{"error": "Error retrieving data"}`, http.StatusInternalServerError)
+		return
 	}
+
+	// Kirim response JSON
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(suratMasukList)
 }
 
-// GetSuratById menangani request untuk mendapatkan surat masuk berdasarkan ID
 func (c *SuratMasukController) GetSuratById(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// Ambil ID dari parameter URL
 	idStr := ps.ByName("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -46,7 +116,6 @@ func (c *SuratMasukController) GetSuratById(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Panggil service untuk mendapatkan data surat masuk
 	surat, err := c.service.GetSuratById(id)
 	if err != nil {
 		log.Println("Error retrieving surat masuk by ID:", err)
@@ -54,13 +123,11 @@ func (c *SuratMasukController) GetSuratById(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Jika data tidak ditemukan
 	if surat == nil {
 		http.Error(w, `{"error": "Surat masuk not found"}`, http.StatusNotFound)
 		return
 	}
 
-	// Buat response JSON
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(surat); err != nil {
@@ -77,12 +144,10 @@ func (c *SuratMasukController) GetCountSuratMasuk(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Buat response JSON
 	response := map[string]int{
 		"jumlah surat": count,
 	}
 
-	// Set header dan tulis response JSON
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -91,9 +156,7 @@ func (c *SuratMasukController) GetCountSuratMasuk(w http.ResponseWriter, r *http
 	}
 }
 
-// UpdateSuratMasukByID menangani request untuk memperbarui surat masuk berdasarkan ID
 func (c *SuratMasukController) UpdateSuratMasukByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// Ambil ID dari parameter URL
 	idStr := ps.ByName("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -102,7 +165,6 @@ func (c *SuratMasukController) UpdateSuratMasukByID(w http.ResponseWriter, r *ht
 		return
 	}
 
-	// Parse form data (termasuk file)
 	err = r.ParseMultipartForm(10 << 20) // Batas ukuran file: 10 MB
 	if err != nil {
 		log.Println("Error parsing form data:", err)
@@ -110,20 +172,17 @@ func (c *SuratMasukController) UpdateSuratMasukByID(w http.ResponseWriter, r *ht
 		return
 	}
 
-	// Ambil nilai dari form
 	nomor := r.FormValue("nomor")
 	tanggal := r.FormValue("tanggal")
 	perihal := r.FormValue("perihal")
 	asal := r.FormValue("asal")
 	title := r.FormValue("title")
 
-	// Ambil file dari form
 	file, handler, err := r.FormFile("file")
 	var filePath string
 	if err == nil {
 		defer file.Close()
 
-		// Simpan file ke folder static/suratmasuk
 		filePath = fmt.Sprintf("static/suratmasuk/%s", handler.Filename)
 		dst, err := os.Create(filePath)
 		if err != nil {
@@ -133,7 +192,6 @@ func (c *SuratMasukController) UpdateSuratMasukByID(w http.ResponseWriter, r *ht
 		}
 		defer dst.Close()
 
-		// Salin file ke lokasi tujuan
 		_, err = io.Copy(dst, file)
 		if err != nil {
 			log.Println("Error copying file:", err)
@@ -141,21 +199,18 @@ func (c *SuratMasukController) UpdateSuratMasukByID(w http.ResponseWriter, r *ht
 			return
 		}
 	} else {
-		// Jika tidak ada file yang diunggah, gunakan file yang sudah ada
 		filePath = r.FormValue("existing_file")
 	}
 
-	// Buat struct SuratMasuk dengan data dari form
 	surat := model.SuratMasuk{
 		Nomor:   nomor,
 		Tanggal: tanggal,
 		Perihal: perihal,
 		Asal:    asal,
 		Title:   title,
-		File:    filePath, // Simpan path file
+		File:    filePath,
 	}
 
-	// Panggil service untuk memperbarui data surat masuk
 	err = c.service.UpdateSuratMasukByID(id, surat)
 	if err != nil {
 		log.Println("Error updating surat masuk:", err)
@@ -163,20 +218,15 @@ func (c *SuratMasukController) UpdateSuratMasukByID(w http.ResponseWriter, r *ht
 		return
 	}
 
-	// Kirim response sukses
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"message": "Surat masuk updated successfully"}`))
 }
 
-
-// DeleteSuratMasuk menangani request untuk menghapus surat masuk berdasarkan nomor dan perihal
 func (c *SuratMasukController) DeleteSuratMasuk(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// Ambil nomor dan perihal dari parameter URL
 	nomor := ps.ByName("nomor")
 	perihal := ps.ByName("perihal")
 
-	// Panggil service untuk menghapus data surat masuk
 	err := c.service.DeleteSuratMasuk(nomor, perihal)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -189,7 +239,6 @@ func (c *SuratMasukController) DeleteSuratMasuk(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Kirim response sukses
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"message": "Surat masuk deleted successfully"}`))

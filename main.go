@@ -47,8 +47,9 @@ func main() {
 	router.GET("/api/suratkeluar/get/:id", suratKeluarController.GetSuratKeluarById)
 	router.PUT("/api/suratkeluar/:id", suratKeluarController.UpdateSuratKeluarByID)
 
-	router.POST("/api/suratmasuk", controller.AddSuratMasuk(db))
-	router.GET("/api/suratmasuk/get", controller.GetSuratMasuk(db))
+	// Surat Masuk Routes
+	router.POST("/api/suratmasuk", suratMasukController.AddSuratMasuk)
+	router.GET("/api/suratmasuk/get", suratMasukController.GetSuratMasuk)
 	router.GET("/api/suratmasuk/get/:id", suratMasukController.GetSuratById)
 	router.GET("/api/suratmasuk/count", suratMasukController.GetCountSuratMasuk)
 	router.PUT("/api/suratmasuk/update/:id", suratMasukController.UpdateSuratMasukByID)
