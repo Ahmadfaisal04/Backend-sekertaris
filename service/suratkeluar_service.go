@@ -4,32 +4,41 @@ import (
 	"Sekertaris/model"
 	"Sekertaris/repository"
 	"database/sql"
-	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
+	"strconv"
 	"time"
 )
 
+type SuratKeluarService struct {
+	repo *repository.SuratKeluarRepository
+}
+
+func NewSuratKeluarService(repo *repository.SuratKeluarRepository) *SuratKeluarService {
+	return &SuratKeluarService{repo: repo}
+}
+
 func AddSuratKeluar(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if r.Method == "POST" {
-
 		var surat model.SuratKeluar
 		surat.Nomor = r.FormValue("nomor")
 		surat.Tanggal = r.FormValue("tanggal")
 		surat.Perihal = r.FormValue("perihal")
-		surat.Ditujukan = r.FormValue("ditujukan")
+		surat.Ditujukan = r.FormValue("ditujukan") // Sesuaikan dengan field di model
 
-		parsedDate, err := time.Parse("2006-01-02", surat.Tanggal)
-		if err != nil {
-			http.Error(w, `{"Error Message": "Invalid date format, expected YYYY-MM-DD"}`, http.StatusBadRequest)
+		// Validasi bahwa tanggal tidak boleh kosong
+		if surat.Tanggal == "" {
+			http.Error(w, `{"Error Message": "Tanggal is required"}`, http.StatusBadRequest)
 			return
 		}
 
-		// Mengambil file yang diunggah
+		parsedDate, err := time.Parse("2006-01-02", surat.Tanggal)
+		if err != nil {
+			panic(err)
+		}
+
 		file, header, err := r.FormFile("file")
 		if err != nil {
 			http.Error(w, "Unable to get file from form", http.StatusBadRequest)
@@ -46,7 +55,7 @@ func AddSuratKeluar(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		}
 
 		// Membuat path lengkap untuk menyimpan file
-		filePath := filepath.Join(staticPath, header.Filename)
+		filePath := staticPath + header.Filename
 
 		// Membuat file di path yang telah ditentukan
 		outFile, err := os.Create(filePath)
@@ -65,63 +74,57 @@ func AddSuratKeluar(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		// Menambahkan judul file dan path file ke dalam struktur SuratKeluar
 		surat.Title = header.Filename
 		surat.File = filePath
-		repository.AddSuratKeluar(w, r, surat, parsedDate, db)
+
+		// Panggil repository untuk menyimpan data surat keluar
+		repository.AddSuratKeluar(db, w, r, surat, parsedDate)
 	}
 }
-func UpdateSuratKeluar(w http.ResponseWriter, r *http.Request, db *sql.DB, nomor string) {
-	existingSurat := repository.GetSuratKeluar(w, r, db, nomor)
 
-	// Parse form-data
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		log.Println("Error parsing multipart form:", err)
-		http.Error(w, `{"Error Message": "Invalid form data"}`, http.StatusBadRequest)
-		return
-	}
-
-	// Update field only if there is new input, otherwise keep the existing data
-	if nomorInput := r.FormValue("nomor"); nomorInput != "" {
-		existingSurat.Nomor = nomorInput
-	}
-	if tanggalInput := r.FormValue("tanggal"); tanggalInput != "" {
-		existingSurat.Tanggal = tanggalInput
-	}
-	if perihalInput := r.FormValue("perihal"); perihalInput != "" {
-		existingSurat.Perihal = perihalInput
-	}
-	if ditujukanInput := r.FormValue("ditujukan"); ditujukanInput != "" {
-		existingSurat.Ditujukan = ditujukanInput
-	}
-	if titleFileInput := r.FormValue("title_file"); titleFileInput != "" {
-		existingSurat.Title = titleFileInput
-	}
-	repository.UpdateSuratKeluar(w, db, existingSurat, nomor)
-}
-func GetSuratKeluarByid(w http.ResponseWriter, r *http.Request, id string, db *sql.DB) {
-
-	var count int
-
-	err := db.QueryRow("SELECT COUNT(*) FROM suratkeluar WHERE id = ?", id).Scan(&count)
+func GetSuratKeluar(w http.ResponseWriter, db *sql.DB) {
+	suratKeluarList, err := repository.GetSuratKeluar(db)
 	if err != nil {
-		log.Println("Error retrieving count surat keluar:", err)
-		http.Error(w, `{"Error Message": "Error retrieving count surat keluar"}`, http.StatusInternalServerError)
+		http.Error(w, `{"Error Message": "Error retrieving data"}`, http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(fmt.Sprintf(`{"count": "%d"}`, count)))
+	w.WriteHeader(http.StatusOK)
+	for _, surat := range suratKeluarList {
+		idStr := strconv.Itoa(surat.ID) // Konversi Id ke string
+		w.Write([]byte(`{"id":` + idStr + `,"nomor":"` + surat.Nomor + `","tanggal":"` + surat.Tanggal + `","perihal":"` + surat.Perihal + `","ditujukan":"` + surat.Ditujukan + `","title":"` + surat.Title + `","file":"` + surat.File + `"}`))
+	}
 }
 
-func GetSuratKeluar(w http.ResponseWriter, r *http.Request) {
-	
-	if err := rows.Err(); err != nil {
-		log.Println("Error after retrieving surat masuk:", err)
-		http.Error(w, `{"Error Message": "Error processing request"}`, http.StatusInternalServerError)
-		return
-	}
+// GetAllSuratKeluar mengambil semua data surat keluar dari repository
+func (s *SuratKeluarService) GetAllSuratKeluar() ([]model.SuratKeluar, error) {
+	return s.repo.GetAllSuratKeluar()
+}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(suratMasukList); err != nil {
-		log.Println("Error encoding surat masuk list to JSON:", err)
-		http.Error(w, `{"Error Message": "Error processing request"}`, http.StatusInternalServerError)
+// GetSuratKeluarById mengambil data surat keluar berdasarkan ID
+func (s *SuratKeluarService) GetSuratKeluarById(id int) (*model.SuratKeluar, error) {
+	surat, err := s.repo.GetSuratKeluarById(id)
+	if err != nil {
+		log.Println("Error retrieving surat keluar by ID from repository:", err)
+		return nil, err
 	}
+	return surat, nil
+}
+
+func (s *SuratKeluarService) GetCountSuratKeluar() (int, error) {
+	count, err := s.repo.GetCountSuratKeluar()
+	if err != nil {
+		log.Println("Error retrieving count surat keluar from repository:", err)
+		return 0, err
+	}
+	return count, nil
+}
+
+// UpdateSuratKeluarByID memperbarui data surat keluar berdasarkan ID
+func (s *SuratKeluarService) UpdateSuratKeluarByID(id int, surat model.SuratKeluar) error {
+	err := s.repo.UpdateSuratKeluarByID(id, surat)
+	if err != nil {
+		log.Println("Error updating surat keluar from repository:", err)
+		return err
+	}
+	return nil
 }

@@ -3,106 +3,122 @@ package repository
 import (
 	"Sekertaris/model"
 	"database/sql"
-	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 )
 
-func AddSuratKeluar(w http.ResponseWriter, r *http.Request, surat model.SuratKeluar, parsedDate time.Time, db *sql.DB) {
-	query := "INSERT INTO suratkeluar (nomor, tanggal, perihal, ditujukan, file, title_file) VALUES (?, ?, ?, ?, ?, ?)"
-	_, err := db.Exec(query, surat.Nomor, parsedDate, surat.Perihal, surat.Ditujukan, surat.File, surat.Title)
+type SuratKeluarRepository struct {
+	db *sql.DB
+}
+
+func NewSuratKeluarRepository(db *sql.DB) *SuratKeluarRepository {
+	return &SuratKeluarRepository{db: db}
+}
+
+func AddSuratKeluar(db *sql.DB, w http.ResponseWriter, r *http.Request, surat model.SuratKeluar, parsedDate time.Time) {
+	query := `INSERT INTO suratkeluar (nomor, tanggal, perihal, ditujukan, title, file) VALUES (?, ?, ?, ?, ?, ?)`
+	_, err := db.Exec(query, surat.Nomor, parsedDate, surat.Perihal, surat.Ditujukan, surat.Title, surat.File)
 	if err != nil {
 		http.Error(w, `{"Error Message": "Error inserting data"}`, http.StatusInternalServerError)
 		return
 	}
+
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"message": "Surat Keluar created successfully"}`))
 }
-func GetCountSuratKeluar(w http.ResponseWriter, R *http.Request, db *sql.DB) {
-	var count int
-	err := db.QueryRow("SELECT count(*) FROM suratkeluar").Scan(&count)
-if err != nil {
-    if err == sql.ErrNoRows {
-        http.Error(w, `{"error": "Data not found"}`, http.StatusNotFound)
-    } else {
-        log.Println("Error retrieving count surat keluar:", err)
-        http.Error(w, `{"error": "Error retrieving count surat keluar"}`, http.StatusInternalServerError)
-    }
-    return
-}
 
-	response := map[string]int{"count": count}
-	jsonResponse, err := json.Marshal(response)
+func GetSuratKeluar(db *sql.DB) ([]model.SuratKeluar, error) {
+	rows, err := db.Query("SELECT id, nomor, tanggal, perihal, ditujukan, title, file FROM suratkeluar")
 	if err != nil {
-		log.Println("Error marshalling JSON:", err)
-		http.Error(w, `{"error": "Error creating JSON response"}`, http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonResponse)
-}
-
-func GetSuratKeluarByid(db *sql.DB, w http.ResponseWriter, nomor int) model.SuratKeluar {
-	var existingSurat model.SuratKeluar
-	err := db.QueryRow("SELECT nomor, tanggal, perihal, ditujukan, title_file FROM suratkeluar WHERE nomor = ?", nomor).Scan(
-		&existingSurat.Nomor, &existingSurat.Tanggal, &existingSurat.Perihal, &existingSurat.Ditujukan, &existingSurat.Title)
-	if err != nil {
-		log.Println("Error fetching existing surat keluar:", err)
-		http.Error(w, `{"Error Message": "Surat Keluar not found"}`, http.StatusNotFound)
-		return existingSurat
-	}
-	return existingSurat
-}
-
-func GetSuratKeluar(w http.ResponseWriter, r *http.Request, db *sql.DB, nomor string) []model.SuratKeluar {
-	var suratMasukList []model.SuratKeluar
-	rows, err := db.Query("SELECT id, nomor, tanggal, perihal, ditujukan, title_file FROM suratkeluar")
-	if err != nil {
-		log.Println("Error retrieving surat masuk:", err)
-		http.Error(w, `{"Error Message": "Error retrieving surat masuk"}`, http.StatusInternalServerError)
-		return suratMasukList
+		log.Println("Error retrieving surat keluar:", err)
+		return nil, err
 	}
 	defer rows.Close()
 
+	var suratKeluarList []model.SuratKeluar
 	for rows.Next() {
 		var surat model.SuratKeluar
-		if err != nil {
-			log.Println("Error retrieving surat keluar:", err)
-			http.Error(w, `{"Error Message": "Surat Keluar not found"}`, http.StatusNotFound)
-			return []model.SuratKeluar{} // Pastikan return nilai kosong
+		if err := rows.Scan(&surat.ID, &surat.Nomor, &surat.Tanggal, &surat.Perihal, &surat.Ditujukan, &surat.Title, &surat.File); err != nil {
+			log.Println("Error scanning surat keluar row:", err)
+			return nil, err
 		}
-
-		suratMasukList = append(suratMasukList, surat)
+		suratKeluarList = append(suratKeluarList, surat)
 	}
-	return suratMasukList
+
+	if err := rows.Err(); err != nil {
+		log.Println("Error after retrieving surat keluar:", err)
+		return nil, err
+	}
+
+	return suratKeluarList, nil
 }
 
-func UpdateSuratKeluar(w http.ResponseWriter, db *sql.DB, existingSurat model.SuratKeluar, nomor string) model.SuratKeluar {
-	result, err := db.Exec("UPDATE suratkeluar SET nomor = ?, tanggal = ?, perihal = ?, ditujukan = ?, title_file =? WHERE nomor = ?",
-		existingSurat.Nomor, existingSurat.Tanggal, existingSurat.Perihal, existingSurat.Ditujukan, existingSurat.Title, nomor)
+// GetAllSuratKeluar mengambil semua data surat keluar dari database
+func (r *SuratKeluarRepository) GetAllSuratKeluar() ([]model.SuratKeluar, error) {
+	rows, err := r.db.Query("SELECT id, nomor, tanggal, perihal, ditujukan, title, file FROM suratkeluar")
+	if err != nil {
+		log.Println("Error retrieving all surat keluar:", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var suratKeluarList []model.SuratKeluar
+	for rows.Next() {
+		var surat model.SuratKeluar
+		if err := rows.Scan(&surat.ID, &surat.Nomor, &surat.Tanggal, &surat.Perihal, &surat.Ditujukan, &surat.Title, &surat.File); err != nil {
+			log.Println("Error scanning surat keluar row:", err)
+			return nil, err
+		}
+		suratKeluarList = append(suratKeluarList, surat)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Println("Error after retrieving all surat keluar:", err)
+		return nil, err
+	}
+
+	return suratKeluarList, nil
+}
+
+// GetSuratKeluarById mengambil data surat keluar berdasarkan ID
+func (r *SuratKeluarRepository) GetSuratKeluarById(id int) (*model.SuratKeluar, error) {
+	var surat model.SuratKeluar
+	err := r.db.QueryRow("SELECT id, nomor, tanggal, perihal, ditujukan, title, file FROM suratkeluar WHERE id = ?", id).
+		Scan(&surat.ID, &surat.Nomor, &surat.Tanggal, &surat.Perihal, &surat.Ditujukan, &surat.Title, &surat.File)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Data tidak ditemukan
+			return nil, nil
+		}
+		log.Println("Error retrieving surat keluar by ID:", err)
+		return nil, err
+	}
+	return &surat, nil
+}
+
+func (r *SuratKeluarRepository) GetCountSuratKeluar() (int, error) {
+	var count int
+	err := r.db.QueryRow("SELECT COUNT(*) FROM suratkeluar").Scan(&count)
+	if err != nil {
+		log.Println("Error retrieving count surat keluar:", err)
+		return 0, err
+	}
+	return count, nil
+}
+
+// UpdateSuratKeluarByID memperbarui data surat keluar berdasarkan ID
+func (r *SuratKeluarRepository) UpdateSuratKeluarByID(id int, surat model.SuratKeluar) error {
+	query := `
+		UPDATE suratkeluar 
+		SET nomor = ?, tanggal = ?, perihal = ?, ditujukan = ?, title = ?, file = ?
+		WHERE id = ?
+	`
+	_, err := r.db.Exec(query, surat.Nomor, surat.Tanggal, surat.Perihal, surat.Ditujukan, surat.Title, surat.File, id)
 	if err != nil {
 		log.Println("Error updating surat keluar:", err)
-		http.Error(w, `{"Error Message": "Error updating surat keluar"}`, http.StatusInternalServerError)
-		return existingSurat
+		return err
 	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		log.Println("Error fetching rows affected:", err)
-		http.Error(w, `{"Error Message": "Error processing request"}`, http.StatusInternalServerError)
-		return existingSurat
-	}
-
-	if rowsAffected == 0 {
-		http.Error(w, `{"Error Message": "Surat Keluar not found"}`, http.StatusNotFound)
-		return existingSurat
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"message": "Surat Keluar updated successfully"}`))
-	return existingSurat
+	return nil
 }

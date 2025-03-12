@@ -28,18 +28,26 @@ func main() {
 
 	fmt.Print("running on port: ", port)
 
+	//Surat Masuk
 	suratMasukRepo := repository.NewSuratMasukRepository(db)
 	suratMasukService := service.NewSuratMasukService(suratMasukRepo)
 	suratMasukController := controller.NewSuratMasukController(suratMasukService)
 
+	//Surat Keluar
+	suratKeluarRepo := repository.NewSuratKeluarRepository(db)
+	suratKeluarService := service.NewSuratKeluarService(suratKeluarRepo)
+	suratKeluarController := controller.NewSuratKeluarController(suratKeluarService)
+
 	router := httprouter.New()
 
-	//Surat Keluar
+	// Surat Keluar Routes
 	router.POST("/api/suratkeluar", controller.AddSuratKeluar(db))
-	router.GET("/api/suratkeluar/:id", controller.GetSuratKeluarByid(db))
-	router.PUT("/api/suratkeluar/:nomor", controller.UpdateSuratKeluar(db))
+	router.GET("/api/suratkeluar", suratKeluarController.GetAllSuratKeluar) 
+	router.GET("/api/suratkeluar/count", suratKeluarController.GetCountSuratKeluar)
+	router.GET("/api/suratkeluar/get/:id", suratKeluarController.GetSuratKeluarById)
+	router.PUT("/api/suratkeluar/:id", suratKeluarController.UpdateSuratKeluarByID)
 
-	//Surat Masuk
+	//Route Surat Masuk
 	router.POST("/api/suratmasuk", controller.AddSuratMasuk(db))
 	router.GET("/api/suratmasuk/get", controller.GetSuratMasuk(db))
 	router.GET("/api/suratmasuk/get/:id", suratMasukController.GetSuratById)

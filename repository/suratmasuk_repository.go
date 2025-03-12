@@ -119,4 +119,3 @@ func (r *SuratMasukRepository) DeleteSuratMasuk(nomor, perihal string) error {
 
 	return nil
 }
-
