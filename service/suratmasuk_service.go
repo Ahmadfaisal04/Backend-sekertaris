@@ -3,6 +3,9 @@ package service
 import (
 	"Sekertaris/model"
 	"Sekertaris/repository"
+	"database/sql"
+	"errors"
+	"fmt"
 	"log"
 	"time"
 )
@@ -33,13 +36,23 @@ func (s *SuratMasukService) GetSuratMasuk() ([]model.SuratMasuk, error) {
 	return suratMasukList, nil
 }
 
-func (s *SuratMasukService) GetSuratById(id int) (*model.SuratMasuk, error) {
+func (s *SuratMasukService) GetSuratById(id int) ([]model.SuratMasuk, error) {
+	if id <= 0 {
+		return nil, fmt.Errorf("ID harus lebih besar dari 0")
+	}
+
+	// Panggil repository untuk mengambil data surat masuk
 	surat, err := s.repo.GetSuratById(id)
 	if err != nil {
-		log.Println("Error retrieving surat masuk by ID:", err)
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("surat dengan ID %d tidak ditemukan", id)
+		}
+		log.Printf("Error retrieving surat masuk by ID %d: %v", id, err)
+		return nil, fmt.Errorf("gagal mengambil surat masuk: %v", err)
 	}
-	return surat, nil
+
+	// Bungkus data dalam slice (array)
+	return []model.SuratMasuk{*surat}, nil
 }
 
 func (s *SuratMasukService) GetCountSuratMasuk() (int, error) {

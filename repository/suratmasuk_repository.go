@@ -66,14 +66,14 @@ func (r *SuratMasukRepository) GetSuratMasuk() ([]model.SuratMasuk, error) {
 
 func (r *SuratMasukRepository) GetSuratById(id int) (*model.SuratMasuk, error) {
 	var surat model.SuratMasuk
-	err := r.db.QueryRow("SELECT id, nomor, tanggal, perihal, asal, title, file FROM suratmasuk WHERE id = ?", id).
-		Scan(&surat.Id, &surat.Nomor, &surat.Tanggal, &surat.Perihal, &surat.Asal, &surat.Title, &surat.File)
+	query := "SELECT id, nomor, tanggal, perihal, asal, title, file FROM suratmasuk WHERE id = ?"
+	err := r.db.QueryRow(query, id).Scan(&surat.Id, &surat.Nomor, &surat.Tanggal, &surat.Perihal, &surat.Asal, &surat.Title, &surat.File)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("surat dengan ID %d tidak ditemukan", id)
 		}
-		log.Println("Error retrieving surat masuk by ID:", err)
-		return nil, err
+		log.Printf("Error retrieving surat masuk by ID %d: %v", id, err)
+		return nil, fmt.Errorf("gagal mengambil surat masuk: %v", err)
 	}
 	return &surat, nil
 }

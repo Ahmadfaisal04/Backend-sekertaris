@@ -49,7 +49,7 @@ func main() {
 
 	// Surat Masuk Routes
 	router.POST("/api/suratmasuk", suratMasukController.AddSuratMasuk)
-	router.GET("/api/suratmasuk/get", suratMasukController.GetSuratMasuk)
+	router.GET("/api/suratmasuk", suratMasukController.GetSuratMasuk)
 	router.GET("/api/suratmasuk/get/:id", suratMasukController.GetSuratById)
 	router.GET("/api/suratmasuk/count", suratMasukController.GetCountSuratMasuk)
 	router.PUT("/api/suratmasuk/update/:id", suratMasukController.UpdateSuratMasukByID)

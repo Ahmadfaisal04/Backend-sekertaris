@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -111,29 +112,25 @@ func (c *SuratMasukController) GetSuratById(w http.ResponseWriter, r *http.Reque
 	idStr := ps.ByName("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		log.Println("Invalid ID:", err)
 		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
 		return
 	}
 
+	// Panggil service untuk mengambil data surat masuk
 	surat, err := c.service.GetSuratById(id)
 	if err != nil {
-		log.Println("Error retrieving surat masuk by ID:", err)
-		http.Error(w, `{"error": "Error retrieving surat masuk"}`, http.StatusInternalServerError)
+		if strings.Contains(err.Error(), "tidak ditemukan") {
+			http.Error(w, `{"error": "Surat masuk not found"}`, http.StatusNotFound)
+			return
+		}
+		http.Error(w, `{"error": "Failed to retrieve surat masuk"}`, http.StatusInternalServerError)
 		return
 	}
 
-	if surat == nil {
-		http.Error(w, `{"error": "Surat masuk not found"}`, http.StatusNotFound)
-		return
-	}
-
+	// Jika berhasil, kirim response JSON dalam bentuk array
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(surat); err != nil {
-		log.Println("Error encoding JSON response:", err)
-		http.Error(w, `{"error": "Error processing request"}`, http.StatusInternalServerError)
-	}
+	json.NewEncoder(w).Encode(surat) // surat adalah slice, sehingga di-encode sebagai array JSON
 }
 
 func (c *SuratMasukController) GetCountSuratMasuk(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

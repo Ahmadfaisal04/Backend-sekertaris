@@ -4,6 +4,8 @@ import (
 	"Sekertaris/model"
 	"Sekertaris/repository"
 	"database/sql"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -101,13 +103,27 @@ func (s *SuratKeluarService) GetAllSuratKeluar() ([]model.SuratKeluar, error) {
 }
 
 // GetSuratKeluarById mengambil data surat keluar berdasarkan ID
-func (s *SuratKeluarService) GetSuratKeluarById(id int) (*model.SuratKeluar, error) {
+func (s *SuratKeluarService) GetSuratKeluarById(id int) ([]model.SuratKeluar, error) {
+	// Validasi ID
+	if id <= 0 {
+		return nil, fmt.Errorf("ID harus lebih besar dari 0")
+	}
+
+	// Panggil repository untuk mengambil data surat keluar
 	surat, err := s.repo.GetSuratKeluarById(id)
 	if err != nil {
-		log.Println("Error retrieving surat keluar by ID from repository:", err)
-		return nil, err
+		// Jika data tidak ditemukan
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("surat keluar dengan ID %d tidak ditemukan", id)
+		}
+
+		// Jika terjadi error lain
+		log.Printf("Error retrieving surat keluar by ID %d: %v", id, err)
+		return nil, fmt.Errorf("gagal mengambil surat keluar: %v", err)
 	}
-	return surat, nil
+
+	// Bungkus data dalam slice (array)
+	return []model.SuratKeluar{*surat}, nil
 }
 
 func (s *SuratKeluarService) GetCountSuratKeluar() (int, error) {

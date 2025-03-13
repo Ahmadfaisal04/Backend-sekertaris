@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -35,7 +36,6 @@ func GetSuratKeluar(db *sql.DB) httprouter.Handle {
 	}
 }
 
-
 // GetAllSuratKeluar menangani request untuk mendapatkan semua surat keluar
 func (c *SuratKeluarController) GetAllSuratKeluar(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	suratKeluarList, err := c.service.GetAllSuratKeluar()
@@ -53,34 +53,39 @@ func (c *SuratKeluarController) GetAllSuratKeluar(w http.ResponseWriter, r *http
 	}
 }
 
-
 // GetSuratKeluarById menangani request untuk mendapatkan surat keluar berdasarkan ID
 func (c *SuratKeluarController) GetSuratKeluarById(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Ambil ID dari parameter URL
 	idStr := ps.ByName("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		log.Println("Invalid ID:", err)
+		log.Printf("Invalid ID: %v", err)
 		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
 		return
 	}
 
+	// Panggil service untuk mengambil data surat keluar
 	surat, err := c.service.GetSuratKeluarById(id)
 	if err != nil {
-		log.Println("Error retrieving surat keluar by ID:", err)
-		http.Error(w, `{"error": "Error retrieving surat keluar"}`, http.StatusInternalServerError)
+		// Jika data tidak ditemukan
+		if strings.Contains(err.Error(), "tidak ditemukan") {
+			log.Printf("Surat keluar with ID %d not found: %v", id, err)
+			http.Error(w, `{"error": "Surat keluar not found"}`, http.StatusNotFound)
+			return
+		}
+
+		// Jika terjadi error lain
+		log.Printf("Error retrieving surat keluar by ID %d: %v", id, err)
+		http.Error(w, `{"error": "Failed to retrieve surat keluar"}`, http.StatusInternalServerError)
 		return
 	}
 
-	if surat == nil {
-		http.Error(w, `{"error": "Surat keluar not found"}`, http.StatusNotFound)
-		return
-	}
-
+	// Jika berhasil, kirim response JSON dalam bentuk array
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(surat); err != nil {
-		log.Println("Error encoding JSON response:", err)
-		http.Error(w, `{"error": "Error processing request"}`, http.StatusInternalServerError)
+		log.Printf("Error encoding JSON response for surat keluar ID %d: %v", id, err)
+		http.Error(w, `{"error": "Failed to process response"}`, http.StatusInternalServerError)
 	}
 }
 
@@ -103,8 +108,6 @@ func (c *SuratKeluarController) GetCountSuratKeluar(w http.ResponseWriter, r *ht
 		http.Error(w, `{"error": "Error processing request"}`, http.StatusInternalServerError)
 	}
 }
-
-
 
 // UpdateSuratKeluarByID menangani request untuk memperbarui surat keluar berdasarkan ID
 func (c *SuratKeluarController) UpdateSuratKeluarByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -173,5 +176,3 @@ func (c *SuratKeluarController) UpdateSuratKeluarByID(w http.ResponseWriter, r *
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"message": "Surat keluar updated successfully"}`))
 }
-
-

@@ -3,6 +3,7 @@ package repository
 import (
 	"Sekertaris/model"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -85,15 +86,14 @@ func (r *SuratKeluarRepository) GetAllSuratKeluar() ([]model.SuratKeluar, error)
 // GetSuratKeluarById mengambil data surat keluar berdasarkan ID
 func (r *SuratKeluarRepository) GetSuratKeluarById(id int) (*model.SuratKeluar, error) {
 	var surat model.SuratKeluar
-	err := r.db.QueryRow("SELECT id, nomor, tanggal, perihal, ditujukan, title, file FROM suratkeluar WHERE id = ?", id).
-		Scan(&surat.ID, &surat.Nomor, &surat.Tanggal, &surat.Perihal, &surat.Ditujukan, &surat.Title, &surat.File)
+	query := "SELECT id, nomor, tanggal, perihal, ditujukan, title, file FROM suratkeluar WHERE id = ?"
+	err := r.db.QueryRow(query, id).Scan(&surat.ID, &surat.Nomor, &surat.Tanggal, &surat.Perihal, &surat.Ditujukan, &surat.Title, &surat.File)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// Data tidak ditemukan
-			return nil, nil
+			return nil, fmt.Errorf("surat keluar dengan ID %d tidak ditemukan", id)
 		}
-		log.Println("Error retrieving surat keluar by ID:", err)
-		return nil, err
+		log.Printf("Error retrieving surat keluar by ID %d: %v", id, err)
+		return nil, fmt.Errorf("gagal mengambil surat keluar: %v", err)
 	}
 	return &surat, nil
 }
