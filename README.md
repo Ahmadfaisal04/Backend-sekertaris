@@ -1,6 +1,6 @@
-Berikut adalah file `README.md` yang telah disusun ulang agar lebih menarik dan informatif:
 
-```markdown
+
+
 # API Sekretaris Desa 📄
 
 API ini digunakan untuk pengelolaan persuratan di sebuah desa. Dibangun menggunakan **Golang** dan **MySQL** sebagai database untuk menyimpan data surat masuk dan surat keluar. API ini dirancang untuk memudahkan pengelolaan surat-menyurat di tingkat desa.
@@ -26,7 +26,6 @@ API ini digunakan untuk pengelolaan persuratan di sebuah desa. Dibangun mengguna
 - **Postman** (untuk testing API)
 - **MySQL Client** (untuk mengelola database)
 
----
 
 ## 🛠️ Struktur Proyek
 
