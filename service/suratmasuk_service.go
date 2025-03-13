@@ -73,11 +73,12 @@ func (s *SuratMasukService) UpdateSuratMasukByID(id int, surat model.SuratMasuk)
 	return nil
 }
 
-func (s *SuratMasukService) DeleteSuratMasuk(nomor, perihal string) error {
-	err := s.repo.DeleteSuratMasuk(nomor, perihal)
+func (s *SuratMasukService) DeleteSuratMasuk(id int) error {
+	err := s.repo.DeleteSuratMasuk(id)
 	if err != nil {
 		log.Println("Error deleting surat masuk:", err)
 		return err
 	}
 	return nil
 }
+

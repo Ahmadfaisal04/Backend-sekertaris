@@ -113,9 +113,9 @@ func (r *SuratMasukRepository) UpdateSuratMasukByID(id int, surat model.SuratMas
 	return nil
 }
 
-func (r *SuratMasukRepository) DeleteSuratMasuk(nomor, perihal string) error {
-	query := "DELETE FROM suratmasuk WHERE nomor = ? AND perihal = ?"
-	result, err := r.db.Exec(query, nomor, perihal)
+func (r *SuratMasukRepository) DeleteSuratMasuk(id int) error {
+	query := "DELETE FROM suratmasuk WHERE id = ? "
+	result, err := r.db.Exec(query, id)
 	if err != nil {
 		log.Println("Error deleting surat masuk:", err)
 		return err
@@ -128,7 +128,7 @@ func (r *SuratMasukRepository) DeleteSuratMasuk(nomor, perihal string) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("tidak ada surat dengan nomor %s dan perihal %s yang ditemukan", nomor, perihal)
+		return fmt.Errorf("tidak ada surat dengan id %s yang ditemukan", id)
 	}
 
 	return nil

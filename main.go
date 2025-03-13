@@ -53,7 +53,7 @@ func main() {
 	router.GET("/api/suratmasuk/get/:id", suratMasukController.GetSuratById)
 	router.GET("/api/suratmasuk/count", suratMasukController.GetCountSuratMasuk)
 	router.PUT("/api/suratmasuk/update/:id", suratMasukController.UpdateSuratMasukByID)
-	router.DELETE("/api/suratmasuk/delete/:nomor/:perihal", suratMasukController.DeleteSuratMasuk)
+	router.DELETE("/api/suratmasuk/delete/:id", suratMasukController.DeleteSuratMasuk)
 
 	server := http.Server{
 		Addr:    ":" + port,

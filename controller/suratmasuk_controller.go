@@ -5,6 +5,7 @@ import (
 	"Sekertaris/service"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -221,22 +222,34 @@ func (c *SuratMasukController) UpdateSuratMasukByID(w http.ResponseWriter, r *ht
 }
 
 func (c *SuratMasukController) DeleteSuratMasuk(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	nomor := ps.ByName("nomor")
-	perihal := ps.ByName("perihal")
-
-	err := c.service.DeleteSuratMasuk(nomor, perihal)
+	// Ambil ID dari parameter URL
+	idStr := ps.ByName("id")
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			log.Println("Surat masuk not found:", err)
-			http.Error(w, `{"error": "Surat masuk not found"}`, http.StatusNotFound)
-			return
-		}
-		log.Println("Error deleting surat masuk:", err)
-		http.Error(w, `{"error": "Error deleting surat masuk"}`, http.StatusInternalServerError)
+		log.Println("Invalid ID:", err)
+		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
 		return
 	}
 
+	// Panggil service untuk menghapus surat masuk
+	err = c.service.DeleteSuratMasuk(id)
+	if err != nil {
+		log.Println("Error deleting surat masuk:", err)
+
+		// Jika data tidak ditemukan
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, `{"error": "Surat masuk not found"}`, http.StatusNotFound)
+			return
+		}
+
+		// Jika terjadi error lain
+		http.Error(w, `{"error": "Failed to delete surat masuk"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Jika berhasil, kirim response JSON
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"message": "Surat masuk deleted successfully"}`))
 }
+
