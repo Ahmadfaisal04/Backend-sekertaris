@@ -11,6 +11,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/cors"
 )
 
 func main() {
@@ -42,7 +43,7 @@ func main() {
 
 	// Surat Keluar Routes
 	router.POST("/api/suratkeluar", controller.AddSuratKeluar(db))
-	router.GET("/api/suratkeluar", suratKeluarController.GetAllSuratKeluar) 
+	router.GET("/api/suratkeluar", suratKeluarController.GetAllSuratKeluar)
 	router.GET("/api/suratkeluar/count", suratKeluarController.GetCountSuratKeluar)
 	router.GET("/api/suratkeluar/get/:id", suratKeluarController.GetSuratKeluarById)
 	router.PUT("/api/suratkeluar/:id", suratKeluarController.UpdateSuratKeluarByID)
@@ -55,9 +56,20 @@ func main() {
 	router.PUT("/api/suratmasuk/update/:id", suratMasukController.UpdateSuratMasukByID)
 	router.DELETE("/api/suratmasuk/delete/:id", suratMasukController.DeleteSuratMasuk)
 
+	// Enable CORS for all routes
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
+
+	// Wrap the router with the CORS middleware
+	handler := c.Handler(router)
+
 	server := http.Server{
 		Addr:    ":" + port,
-		Handler: router,
+		Handler: handler,
 	}
 
 	errServer := server.ListenAndServe()
