@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -23,63 +24,62 @@ func NewSuratKeluarService(repo *repository.SuratKeluarRepository) *SuratKeluarS
 }
 
 func AddSuratKeluar(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	if r.Method == "POST" {
-		var surat model.SuratKeluar
-		surat.Nomor = r.FormValue("nomor")
-		surat.Tanggal = r.FormValue("tanggal")
-		surat.Perihal = r.FormValue("perihal")
-		surat.Ditujukan = r.FormValue("ditujukan") // Sesuaikan dengan field di model
-
-		// Validasi bahwa tanggal tidak boleh kosong
-		if surat.Tanggal == "" {
-			http.Error(w, `{"Error Message": "Tanggal is required"}`, http.StatusBadRequest)
-			return
-		}
-
-		parsedDate, err := time.Parse("2006-01-02", surat.Tanggal)
-		if err != nil {
-			panic(err)
-		}
-
-		file, header, err := r.FormFile("file")
-		if err != nil {
-			http.Error(w, "Unable to get file from form", http.StatusBadRequest)
-			return
-		}
-		defer file.Close()
-
-		// Menentukan path penyimpanan file di direktori static
-		staticPath := "./static/suratkeluar/"
-		err = os.MkdirAll(staticPath, os.ModePerm)
-		if err != nil {
-			http.Error(w, "Unable to create static directory", http.StatusInternalServerError)
-			return
-		}
-
-		// Membuat path lengkap untuk menyimpan file
-		filePath := staticPath + header.Filename
-
-		// Membuat file di path yang telah ditentukan
-		outFile, err := os.Create(filePath)
-		if err != nil {
-			http.Error(w, "Unable to create file", http.StatusInternalServerError)
-			return
-		}
-		defer outFile.Close()
-
-		_, err = io.Copy(outFile, file)
-		if err != nil {
-			http.Error(w, "Error saving file", http.StatusInternalServerError)
-			return
-		}
-
-		// Menambahkan judul file dan path file ke dalam struktur SuratKeluar
-		surat.Title = header.Filename
-		surat.File = filePath
-
-		// Panggil repository untuk menyimpan data surat keluar
-		repository.AddSuratKeluar(db, w, r, surat, parsedDate)
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"Error Message": "Method Not Allowed"}`, http.StatusMethodNotAllowed)
+		return
 	}
+
+	var surat model.SuratKeluar
+	surat.Nomor = r.FormValue("nomor")
+	surat.Tanggal = r.FormValue("tanggal")
+	surat.Perihal = r.FormValue("perihal")
+	surat.Ditujukan = r.FormValue("ditujukan")
+
+	if surat.Tanggal == "" {
+		http.Error(w, `{"Error Message": "Tanggal is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	parsedDate, err := time.Parse("2006-01-02", surat.Tanggal)
+	if err != nil {
+		http.Error(w, `{"Error Message": "Invalid date format (YYYY-MM-DD)"}`, http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, `{"Error Message": "Unable to get file from form"}`, http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Tentukan direktori penyimpanan
+	staticPath := "./static/suratkeluar/"
+	if err := os.MkdirAll(staticPath, os.ModePerm); err != nil {
+		http.Error(w, `{"Error Message": "Unable to create static directory"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Simpan file ke disk
+	filePath := filepath.Join(staticPath, header.Filename)
+	outFile, err := os.Create(filePath)
+	if err != nil {
+		http.Error(w, `{"Error Message": "Unable to create file"}`, http.StatusInternalServerError)
+		return
+	}
+	defer outFile.Close()
+
+	if _, err := io.Copy(outFile, file); err != nil {
+		http.Error(w, `{"Error Message": "Error saving file"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Simpan detail ke struct
+	surat.Title = header.Filename
+	surat.File = filePath
+
+	// Panggil repository (jika ingin diganti ke service, tinggal ubah)
+	repository.AddSuratKeluar(db, w, r, surat, parsedDate)
 }
 
 func GetSuratKeluar(w http.ResponseWriter, db *sql.DB) {

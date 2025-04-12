@@ -41,6 +41,10 @@ func main() {
 
 	router := httprouter.New()
 
+	// Serve static files
+	router.ServeFiles("/static/*filepath", http.Dir("static"))
+	
+
 	// Surat Keluar Routes
 	router.POST("/api/suratkeluar", controller.AddSuratKeluar(db))
 	router.GET("/api/suratkeluar", suratKeluarController.GetAllSuratKeluar)
@@ -58,9 +62,16 @@ func main() {
 
 	// Enable CORS for all routes
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   []string{"http://localhost:5800"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowedHeaders: []string{
+			"Content-Type",
+			"Authorization",
+			"X-Requested-With",
+			"Accept",
+			"Origin",
+			"Content-Disposition", // Penting untuk file upload
+	},
 		AllowCredentials: true,
 	})
 

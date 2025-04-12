@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -163,52 +162,70 @@ func (c *SuratMasukController) UpdateSuratMasukByID(w http.ResponseWriter, r *ht
 		return
 	}
 
-	err = r.ParseMultipartForm(10 << 20) // Batas ukuran file: 10 MB
+	// Parse form data
+	err = r.ParseMultipartForm(10 << 20) // 10 MB max
 	if err != nil {
 		log.Println("Error parsing form data:", err)
 		http.Error(w, `{"error": "Error parsing form data"}`, http.StatusBadRequest)
 		return
 	}
 
-	nomor := r.FormValue("nomor")
-	tanggal := r.FormValue("tanggal")
-	perihal := r.FormValue("perihal")
-	asal := r.FormValue("asal")
-	title := r.FormValue("title")
+	// Ambil data dari form
+	surat := model.SuratMasuk{
+		Nomor:   r.FormValue("nomor"),
+		Tanggal: r.FormValue("tanggal"),
+		Perihal: r.FormValue("perihal"),
+		Asal:    r.FormValue("asal"),
+		Title:   r.FormValue("title"),
+	}
 
+	// Handle file upload
 	file, handler, err := r.FormFile("file")
-	var filePath string
 	if err == nil {
 		defer file.Close()
 
-		filePath = fmt.Sprintf("static/suratmasuk/%s", handler.Filename)
+		// Buat direktori jika belum ada
+		staticPath := "./static/suratmasuk/"
+		err = os.MkdirAll(staticPath, os.ModePerm)
+		if err != nil {
+			log.Println("Error creating directory:", err)
+			http.Error(w, `{"error": "Error creating directory"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// Buat file baru
+		filePath := staticPath + handler.Filename
 		dst, err := os.Create(filePath)
 		if err != nil {
-			log.Println("Error saving file:", err)
-			http.Error(w, `{"error": "Error saving file"}`, http.StatusInternalServerError)
+			log.Println("Error creating file:", err)
+			http.Error(w, `{"error": "Error creating file"}`, http.StatusInternalServerError)
 			return
 		}
 		defer dst.Close()
 
+		// Salin file
 		_, err = io.Copy(dst, file)
 		if err != nil {
 			log.Println("Error copying file:", err)
 			http.Error(w, `{"error": "Error copying file"}`, http.StatusInternalServerError)
 			return
 		}
+
+		// Set path file baru
+		surat.File = filePath
+		surat.Title = handler.Filename
 	} else {
-		filePath = r.FormValue("existing_file")
+		// Jika tidak ada file baru diupload, gunakan file yang sudah ada
+		existingFile := r.FormValue("existing_file")
+		existingTitle := r.FormValue("existing_title")
+
+		if existingFile != "" {
+			surat.File = existingFile
+			surat.Title = existingTitle
+		}
 	}
 
-	surat := model.SuratMasuk{
-		Nomor:   nomor,
-		Tanggal: tanggal,
-		Perihal: perihal,
-		Asal:    asal,
-		Title:   title,
-		File:    filePath,
-	}
-
+	// Update data
 	err = c.service.UpdateSuratMasukByID(id, surat)
 	if err != nil {
 		log.Println("Error updating surat masuk:", err)
@@ -216,9 +233,10 @@ func (c *SuratMasukController) UpdateSuratMasukByID(w http.ResponseWriter, r *ht
 		return
 	}
 
+	// Response sukses
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"message": "Surat masuk updated successfully"}`))
+	json.NewEncoder(w).Encode(map[string]string{"message": "Surat masuk updated successfully"})
 }
 
 func (c *SuratMasukController) DeleteSuratMasuk(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -252,4 +270,3 @@ func (c *SuratMasukController) DeleteSuratMasuk(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"message": "Surat masuk deleted successfully"}`))
 }
-
