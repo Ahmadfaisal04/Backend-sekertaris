@@ -62,7 +62,7 @@ func main() {
 
 	// Enable CORS for all routes
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5800"},
+		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{
 			"Content-Type",
