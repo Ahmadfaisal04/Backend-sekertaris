@@ -5,6 +5,7 @@ import (
 	"Sekertaris/service"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -260,4 +261,36 @@ func (c *SuratKeluarController) UpdateSuratKeluarByID(w http.ResponseWriter, r *
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Surat masuk updated successfully"})
+}
+
+func (c *SuratKeluarController) DeleteSuratKeluar(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// Ambil ID dari parameter URL
+	idStr := ps.ByName("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Println("Invalid ID:", err)
+		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Panggil service untuk menghapus surat keluar
+	err = c.service.DeleteSuratKeluar(id)
+	if err != nil {
+		log.Println("Error deleting surat keluar:", err)
+
+		// Jika data tidak ditemukan
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, `{"error": "Surat keluar not found"}`, http.StatusNotFound)
+			return
+		}
+
+		// Jika terjadi error lain
+		http.Error(w, `{"error": "Failed to delete surat keluar"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Jika berhasil, kirim response JSON
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message": "Surat keluar deleted successfully"}`))
 }

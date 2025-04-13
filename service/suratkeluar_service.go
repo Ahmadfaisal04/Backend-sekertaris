@@ -144,3 +144,14 @@ func (s *SuratKeluarService) UpdateSuratKeluarByID(id int, surat model.SuratKelu
 	}
 	return nil
 }
+
+
+
+func (s *SuratKeluarService) DeleteSuratKeluar(id int) error {
+	err := s.repo.DeleteSuratKeluar(id)
+	if err != nil {
+		log.Println("Error deleting surat keluar:", err)
+		return err
+	}
+	return nil
+}

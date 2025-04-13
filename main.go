@@ -51,6 +51,7 @@ func main() {
 	router.GET("/api/suratkeluar/count", suratKeluarController.GetCountSuratKeluar)
 	router.GET("/api/suratkeluar/get/:id", suratKeluarController.GetSuratKeluarById)
 	router.PUT("/api/suratkeluar/:id", suratKeluarController.UpdateSuratKeluarByID)
+	router.DELETE("/api/suratkeluar/delete/:id", suratKeluarController.DeleteSuratKeluar)
 
 	// Surat Masuk Routes
 	router.POST("/api/suratmasuk", suratMasukController.AddSuratMasuk)
@@ -62,7 +63,7 @@ func main() {
 
 	// Enable CORS for all routes
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   []string{"http://localhost:5800"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{
 			"Content-Type",

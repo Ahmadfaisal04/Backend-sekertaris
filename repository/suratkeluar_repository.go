@@ -122,3 +122,25 @@ func (r *SuratKeluarRepository) UpdateSuratKeluarByID(id int, surat model.SuratK
 	}
 	return nil
 }
+
+
+func (r *SuratKeluarRepository) DeleteSuratKeluar(id int) error {
+	query := "DELETE FROM suratkeluar WHERE id = ? "
+	result, err := r.db.Exec(query, id)
+	if err != nil {
+		log.Println("Error deleting surat keluar:", err)
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Println("Error checking rows affected:", err)
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("tidak ada surat dengan id %s yang ditemukan", id)
+	}
+
+	return nil
+}
