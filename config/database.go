@@ -19,7 +19,7 @@ func ConnectDB()(db *sql.DB, err error) {
 
 	dbName := os.Getenv("DB_NAME")
 
-	mysql := fmt.Sprintf("root:@tcp(localhost:3306)/%s", dbName)
+	mysql := fmt.Sprintf("root:cMBXwyBNKnQGIgeWZZnGNDraEvvbcPen@tcp(caboose.proxy.rlwy.net:40008)/%s", dbName)
 	db, err = sql.Open("mysql", mysql)
 	if err != nil {
 		panic(err)
