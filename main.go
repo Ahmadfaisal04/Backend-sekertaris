@@ -67,6 +67,7 @@ func main() {
 	router.GET("/api/permohonansurat/get/:id", permohonanSuratController.GetPermohonanSuratByID)
 	router.PUT("/api/permohonansurat/update/:id", permohonanSuratController.UpdatePermohonanSuratByID)
 	router.DELETE("/api/permohonansurat/delete/:id", permohonanSuratController.DeletePermohonanSurat)
+	router.PATCH("/api/permohonansurat/patch/:id", permohonanSuratController.UpdateStatus)
 
 
 	// Surat Masuk Routes

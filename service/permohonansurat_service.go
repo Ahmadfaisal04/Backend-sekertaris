@@ -5,6 +5,7 @@ import (
 	"Sekertaris/repository"
 	"fmt"
 	"log"
+	"time"
 )
 
 type PermohonanSuratService struct {
@@ -33,7 +34,7 @@ func (s *PermohonanSuratService) GetPermohonanSurat() ([]model.PermohonanSurat, 
 	return permohonanSuratList, nil
 }
 
-func (s *PermohonanSuratService) GetPermohonanSuratByID(id int64) ([]model.PermohonanSurat, error) {
+func (s *PermohonanSuratService) GetPermohonanSuratByID(id int64) (*model.PermohonanSurat, error) {
 	if id <= 0 {
 		return nil, fmt.Errorf("ID harus lebih besar dari 0")
 	}
@@ -44,13 +45,24 @@ func (s *PermohonanSuratService) GetPermohonanSuratByID(id int64) ([]model.Permo
 		return nil, err
 	}
 
-	return []model.PermohonanSurat{*permohonan}, nil
+	return permohonan, nil
 }
 
 func (s *PermohonanSuratService) UpdatePermohonanSuratByID(id int64, permohonan model.PermohonanSurat) error {
 	err := s.repo.UpdatePermohonanSuratByID(id, permohonan)
 	if err != nil {
 		log.Println("Error updating permohonan surat:", err)
+		return err
+	}
+	return nil
+}
+
+func (s *PermohonanSuratService) UpdateStatusByID(id int64, status model.Status) error {
+	
+	updatedAt := time.Now()
+	err := s.repo.UpdateStatusByID(id, status, updatedAt)
+	if err != nil {
+		log.Println("Error updating status permohonan surat:", err)
 		return err
 	}
 	return nil
