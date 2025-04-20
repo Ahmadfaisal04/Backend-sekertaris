@@ -98,15 +98,6 @@ func (r *SuratKeluarRepository) GetSuratKeluarById(id int) (*model.SuratKeluar, 
 	return &surat, nil
 }
 
-func (r *SuratKeluarRepository) GetCountSuratKeluar() (int, error) {
-	var count int
-	err := r.db.QueryRow("SELECT COUNT(*) FROM suratkeluar").Scan(&count)
-	if err != nil {
-		log.Println("Error retrieving count surat keluar:", err)
-		return 0, err
-	}
-	return count, nil
-}
 
 // UpdateSuratKeluarByID memperbarui data surat keluar berdasarkan ID
 func (r *SuratKeluarRepository) UpdateSuratKeluarByID(id int, surat model.SuratKeluar) error {

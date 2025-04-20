@@ -5,9 +5,13 @@ import (
 	"Sekertaris/controller"
 	"Sekertaris/repository"
 	"Sekertaris/service"
+	"context"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
@@ -15,77 +19,113 @@ import (
 )
 
 func main() {
-
+	// Load environment variables
 	errEnv := godotenv.Load()
 	if errEnv != nil {
 		panic(errEnv)
 	}
 	port := os.Getenv("APP_PORT")
+	if port == "" {
+		port = "8080"
+	}
 
+	// Connect to database
 	db, err := config.ConnectDB()
 	if err != nil {
 		panic(err)
 	}
+	defer db.Close()
 
-	fmt.Print("running on port: ", port)
+	fmt.Printf("Running on port: %s\n", port)
 
-	//Surat Masuk
+	// Permohonan Surat
+	permohonanSuratRepo := repository.NewPermohonanSuratRepository(db)
+	permohonanSuratService := service.NewPermohonanSuratService(permohonanSuratRepo)
+	permohonanSuratController := controller.NewPermohonanSuratController(permohonanSuratService)
+
+	// Surat Masuk
 	suratMasukRepo := repository.NewSuratMasukRepository(db)
 	suratMasukService := service.NewSuratMasukService(suratMasukRepo)
 	suratMasukController := controller.NewSuratMasukController(suratMasukService)
 
-	//Surat Keluar
+	// Surat Keluar
 	suratKeluarRepo := repository.NewSuratKeluarRepository(db)
 	suratKeluarService := service.NewSuratKeluarService(suratKeluarRepo)
 	suratKeluarController := controller.NewSuratKeluarController(suratKeluarService)
 
+	// Setup router
 	router := httprouter.New()
 
 	// Serve static files
 	router.ServeFiles("/static/*filepath", http.Dir("static"))
-	
+	router.ServeFiles("/uploads/*filepath", http.Dir("uploads"))
 
-	// Surat Keluar Routes
-	router.POST("/api/suratkeluar", controller.AddSuratKeluar(db))
-	router.GET("/api/suratkeluar", suratKeluarController.GetAllSuratKeluar)
-	router.GET("/api/suratkeluar/count", suratKeluarController.GetCountSuratKeluar)
-	router.GET("/api/suratkeluar/get/:id", suratKeluarController.GetSuratKeluarById)
-	router.PUT("/api/suratkeluar/:id", suratKeluarController.UpdateSuratKeluarByID)
-	router.DELETE("/api/suratkeluar/delete/:id", suratKeluarController.DeleteSuratKeluar)
+
+	// Permohonan Surat Routes
+	router.POST("/api/permohonansurat", permohonanSuratController.AddPermohonanSurat)
+	router.GET("/api/permohonansurat", permohonanSuratController.GetPermohonanSurat)
+	router.GET("/api/permohonansurat/get/:id", permohonanSuratController.GetPermohonanSuratByID)
+	router.PUT("/api/permohonansurat/update/:id", permohonanSuratController.UpdatePermohonanSuratByID)
+	router.DELETE("/api/permohonansurat/delete/:id", permohonanSuratController.DeletePermohonanSurat)
+
 
 	// Surat Masuk Routes
 	router.POST("/api/suratmasuk", suratMasukController.AddSuratMasuk)
 	router.GET("/api/suratmasuk", suratMasukController.GetSuratMasuk)
 	router.GET("/api/suratmasuk/get/:id", suratMasukController.GetSuratById)
-	router.GET("/api/suratmasuk/count", suratMasukController.GetCountSuratMasuk)
 	router.PUT("/api/suratmasuk/update/:id", suratMasukController.UpdateSuratMasukByID)
 	router.DELETE("/api/suratmasuk/delete/:id", suratMasukController.DeleteSuratMasuk)
 
-	// Enable CORS for all routes
+	// Surat Keluar Routes
+	router.POST("/api/suratkeluar", controller.AddSuratKeluar(db))
+	router.GET("/api/suratkeluar", suratKeluarController.GetAllSuratKeluar)
+	router.GET("/api/suratkeluar/get/:id", suratKeluarController.GetSuratKeluarById)
+	router.PUT("/api/suratkeluar/update/:id", suratKeluarController.UpdateSuratKeluarByID)
+	router.DELETE("/api/suratkeluar/delete/:id", suratKeluarController.DeleteSuratKeluar)
+
+	// Enable CORS
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5800"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedOrigins: []string{"http://localhost:5800"}, // Tambah semua kemungkinan origin
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{
 			"Content-Type",
 			"Authorization",
 			"X-Requested-With",
 			"Accept",
 			"Origin",
-			"Content-Disposition", // Penting untuk file upload
-	},
+			"Content-Disposition",
+		},
 		AllowCredentials: true,
+		Debug:            true,
 	})
 
-	// Wrap the router with the CORS middleware
+	// Wrap router with CORS
 	handler := c.Handler(router)
 
-	server := http.Server{
+	// Create server
+	server := &http.Server{
 		Addr:    ":" + port,
 		Handler: handler,
 	}
 
-	errServer := server.ListenAndServe()
-	if errServer != nil {
-		panic(errServer)
+	// Start server in goroutine
+	go func() {
+		fmt.Printf("Server running on http://localhost:%s\n", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			panic(err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	fmt.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		fmt.Printf("Server shutdown failed: %v\n", err)
 	}
+	fmt.Println("Server stopped gracefully")
 }

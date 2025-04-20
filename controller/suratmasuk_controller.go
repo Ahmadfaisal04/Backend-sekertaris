@@ -133,25 +133,7 @@ func (c *SuratMasukController) GetSuratById(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(surat) // surat adalah slice, sehingga di-encode sebagai array JSON
 }
 
-func (c *SuratMasukController) GetCountSuratMasuk(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	count, err := c.service.GetCountSuratMasuk()
-	if err != nil {
-		log.Println("Error retrieving count surat masuk:", err)
-		http.Error(w, `{"error": "Error retrieving count surat masuk"}`, http.StatusInternalServerError)
-		return
-	}
 
-	response := map[string]int{
-		"jumlah surat": count,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Println("Error encoding JSON response:", err)
-		http.Error(w, `{"error": "Error processing request"}`, http.StatusInternalServerError)
-	}
-}
 
 func (c *SuratMasukController) UpdateSuratMasukByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	idStr := ps.ByName("id")

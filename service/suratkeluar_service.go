@@ -126,14 +126,7 @@ func (s *SuratKeluarService) GetSuratKeluarById(id int) ([]model.SuratKeluar, er
 	return []model.SuratKeluar{*surat}, nil
 }
 
-func (s *SuratKeluarService) GetCountSuratKeluar() (int, error) {
-	count, err := s.repo.GetCountSuratKeluar()
-	if err != nil {
-		log.Println("Error retrieving count surat keluar from repository:", err)
-		return 0, err
-	}
-	return count, nil
-}
+
 
 // UpdateSuratKeluarByID memperbarui data surat keluar berdasarkan ID
 func (s *SuratKeluarService) UpdateSuratKeluarByID(id int, surat model.SuratKeluar) error {

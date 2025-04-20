@@ -55,14 +55,6 @@ func (s *SuratMasukService) GetSuratById(id int) ([]model.SuratMasuk, error) {
 	return []model.SuratMasuk{*surat}, nil
 }
 
-func (s *SuratMasukService) GetCountSuratMasuk() (int, error) {
-	count, err := s.repo.GetCountSuratMasuk()
-	if err != nil {
-		log.Println("Error retrieving count surat masuk:", err)
-		return 0, err
-	}
-	return count, nil
-}
 
 func (s *SuratMasukService) UpdateSuratMasukByID(id int, surat model.SuratMasuk) error {
 	err := s.repo.UpdateSuratMasukByID(id, surat)
