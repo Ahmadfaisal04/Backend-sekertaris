@@ -22,15 +22,18 @@ func (r *PermohonanSuratRepository) AddPermohonanSurat(permohonan model.Permohon
             nik, nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin, 
             pendidikan, pekerjaan, agama, status_pernikahan, kewarganegaraan, 
             alamat_lengkap, jenis_surat, keterangan, nomor_hp, dokumen_url, 
-            status, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            nama_usaha, jenis_usaha, alamat_usaha, alamat_tujuan, alasan_pindah, 
+            nama_ayah, nama_ibu, tgl_kematian, penyebab_kematian, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
 	result, err := r.db.Exec(query,
 		permohonan.NIK, permohonan.NamaLengkap, permohonan.TempatLahir, permohonan.TanggalLahir,
 		permohonan.JenisKelamin, permohonan.Pendidikan, permohonan.Pekerjaan, permohonan.Agama,
 		permohonan.StatusPernikahan, permohonan.Kewarganegaraan, permohonan.AlamatLengkap,
 		permohonan.JenisSurat, permohonan.Keterangan, permohonan.NomorHP, permohonan.DokumenURL,
-		permohonan.Status, permohonan.CreatedAt, permohonan.UpdatedAt,
+		permohonan.NamaUsaha, permohonan.JenisUsaha, permohonan.AlamatUsaha, permohonan.AlamatTujuan,
+		permohonan.AlasanPindah, permohonan.NamaAyah, permohonan.NamaIbu, permohonan.TglKematian,
+		permohonan.PenyebabKematian, permohonan.Status,
 	)
 	if err != nil {
 		log.Println("Error adding permohonan surat:", err)
@@ -48,7 +51,9 @@ func (r *PermohonanSuratRepository) AddPermohonanSurat(permohonan model.Permohon
         SELECT id, nik, nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin,
             pendidikan, pekerjaan, agama, status_pernikahan, kewarganegaraan,
             alamat_lengkap, jenis_surat, keterangan, nomor_hp, dokumen_url,
-            status, created_at, updated_at
+            nama_usaha, jenis_usaha, alamat_usaha, alamat_tujuan, alasan_pindah,
+            nama_ayah, nama_ibu, tgl_kematian, penyebab_kematian, status,
+            created_at, updated_at
         FROM permohonansurat WHERE id = ?
     `
 	err = r.db.QueryRow(query, lastInsertID).Scan(
@@ -57,6 +62,9 @@ func (r *PermohonanSuratRepository) AddPermohonanSurat(permohonan model.Permohon
 		&newPermohonan.Pekerjaan, &newPermohonan.Agama, &newPermohonan.StatusPernikahan,
 		&newPermohonan.Kewarganegaraan, &newPermohonan.AlamatLengkap, &newPermohonan.JenisSurat,
 		&newPermohonan.Keterangan, &newPermohonan.NomorHP, &newPermohonan.DokumenURL,
+		&newPermohonan.NamaUsaha, &newPermohonan.JenisUsaha, &newPermohonan.AlamatUsaha,
+		&newPermohonan.AlamatTujuan, &newPermohonan.AlasanPindah, &newPermohonan.NamaAyah,
+		&newPermohonan.NamaIbu, &newPermohonan.TglKematian, &newPermohonan.PenyebabKematian,
 		&newPermohonan.Status, &newPermohonan.CreatedAt, &newPermohonan.UpdatedAt,
 	)
 	if err != nil {
@@ -72,8 +80,11 @@ func (r *PermohonanSuratRepository) GetPermohonanSurat() ([]model.PermohonanSura
         SELECT id, nik, nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin,
             pendidikan, pekerjaan, agama, status_pernikahan, kewarganegaraan,
             alamat_lengkap, jenis_surat, keterangan, nomor_hp, dokumen_url,
-            status, created_at, updated_at
+            nama_usaha, jenis_usaha, alamat_usaha, alamat_tujuan, alasan_pindah,
+            nama_ayah, nama_ibu, tgl_kematian, penyebab_kematian, status,
+            created_at, updated_at
         FROM permohonansurat
+        ORDER BY created_at ASC
     `
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -91,6 +102,9 @@ func (r *PermohonanSuratRepository) GetPermohonanSurat() ([]model.PermohonanSura
 			&permohonan.Pekerjaan, &permohonan.Agama, &permohonan.StatusPernikahan,
 			&permohonan.Kewarganegaraan, &permohonan.AlamatLengkap, &permohonan.JenisSurat,
 			&permohonan.Keterangan, &permohonan.NomorHP, &permohonan.DokumenURL,
+			&permohonan.NamaUsaha, &permohonan.JenisUsaha, &permohonan.AlamatUsaha,
+			&permohonan.AlamatTujuan, &permohonan.AlasanPindah, &permohonan.NamaAyah,
+			&permohonan.NamaIbu, &permohonan.TglKematian, &permohonan.PenyebabKematian,
 			&permohonan.Status, &permohonan.CreatedAt, &permohonan.UpdatedAt,
 		)
 		if err != nil {
@@ -114,7 +128,9 @@ func (r *PermohonanSuratRepository) GetPermohonanSuratByID(id int64) (*model.Per
         SELECT id, nik, nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin,
             pendidikan, pekerjaan, agama, status_pernikahan, kewarganegaraan,
             alamat_lengkap, jenis_surat, keterangan, nomor_hp, dokumen_url,
-            status, created_at, updated_at
+            nama_usaha, jenis_usaha, alamat_usaha, alamat_tujuan, alasan_pindah,
+            nama_ayah, nama_ibu, tgl_kematian, penyebab_kematian, status,
+            created_at, updated_at
         FROM permohonansurat WHERE id = ?
     `
 	err := r.db.QueryRow(query, id).Scan(
@@ -123,6 +139,9 @@ func (r *PermohonanSuratRepository) GetPermohonanSuratByID(id int64) (*model.Per
 		&permohonan.Pekerjaan, &permohonan.Agama, &permohonan.StatusPernikahan,
 		&permohonan.Kewarganegaraan, &permohonan.AlamatLengkap, &permohonan.JenisSurat,
 		&permohonan.Keterangan, &permohonan.NomorHP, &permohonan.DokumenURL,
+		&permohonan.NamaUsaha, &permohonan.JenisUsaha, &permohonan.AlamatUsaha,
+		&permohonan.AlamatTujuan, &permohonan.AlasanPindah, &permohonan.NamaAyah,
+		&permohonan.NamaIbu, &permohonan.TglKematian, &permohonan.PenyebabKematian,
 		&permohonan.Status, &permohonan.CreatedAt, &permohonan.UpdatedAt,
 	)
 	if err != nil {
@@ -135,13 +154,49 @@ func (r *PermohonanSuratRepository) GetPermohonanSuratByID(id int64) (*model.Per
 	return &permohonan, nil
 }
 
+func (r *PermohonanSuratRepository) GetOldestPendingPermohonan() (*model.PermohonanSurat, error) {
+	var permohonan model.PermohonanSurat
+	query := `
+        SELECT id, nik, nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin,
+            pendidikan, pekerjaan, agama, status_pernikahan, kewarganegaraan,
+            alamat_lengkap, jenis_surat, keterangan, nomor_hp, dokumen_url,
+            nama_usaha, jenis_usaha, alamat_usaha, alamat_tujuan, alasan_pindah,
+            nama_ayah, nama_ibu, tgl_kematian, penyebab_kematian, status,
+            created_at, updated_at
+        FROM permohonansurat
+        WHERE status = 'Diproses'
+        ORDER BY created_at ASC
+        LIMIT 1
+    `
+	err := r.db.QueryRow(query).Scan(
+		&permohonan.ID, &permohonan.NIK, &permohonan.NamaLengkap, &permohonan.TempatLahir,
+		&permohonan.TanggalLahir, &permohonan.JenisKelamin, &permohonan.Pendidikan,
+		&permohonan.Pekerjaan, &permohonan.Agama, &permohonan.StatusPernikahan,
+		&permohonan.Kewarganegaraan, &permohonan.AlamatLengkap, &permohonan.JenisSurat,
+		&permohonan.Keterangan, &permohonan.NomorHP, &permohonan.DokumenURL,
+		&permohonan.NamaUsaha, &permohonan.JenisUsaha, &permohonan.AlamatUsaha,
+		&permohonan.AlamatTujuan, &permohonan.AlasanPindah, &permohonan.NamaAyah,
+		&permohonan.NamaIbu, &permohonan.TglKematian, &permohonan.PenyebabKematian,
+		&permohonan.Status, &permohonan.CreatedAt, &permohonan.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // Tidak ada permohonan dengan status Diproses
+		}
+		log.Println("Error retrieving oldest pending permohonan surat:", err)
+		return nil, fmt.Errorf("gagal mengambil permohonan surat tertua: %v", err)
+	}
+	return &permohonan, nil
+}
+
 func (r *PermohonanSuratRepository) UpdatePermohonanSuratByID(id int64, permohonan model.PermohonanSurat) error {
 	query := `
         UPDATE permohonansurat 
         SET nik = ?, nama_lengkap = ?, tempat_lahir = ?, tanggal_lahir = ?, jenis_kelamin = ?,
             pendidikan = ?, pekerjaan = ?, agama = ?, status_pernikahan = ?, kewarganegaraan = ?,
             alamat_lengkap = ?, jenis_surat = ?, keterangan = ?, nomor_hp = ?, dokumen_url = ?,
-            status = ?, updated_at = ?
+            nama_usaha = ?, jenis_usaha = ?, alamat_usaha = ?, alamat_tujuan = ?, alasan_pindah = ?,
+            nama_ayah = ?, nama_ibu = ?, tgl_kematian = ?, penyebab_kematian = ?, ditujukan = ?, status = ?
         WHERE id = ?
     `
 	result, err := r.db.Exec(query,
@@ -149,7 +204,9 @@ func (r *PermohonanSuratRepository) UpdatePermohonanSuratByID(id int64, permohon
 		permohonan.JenisKelamin, permohonan.Pendidikan, permohonan.Pekerjaan, permohonan.Agama,
 		permohonan.StatusPernikahan, permohonan.Kewarganegaraan, permohonan.AlamatLengkap,
 		permohonan.JenisSurat, permohonan.Keterangan, permohonan.NomorHP, permohonan.DokumenURL,
-		permohonan.Status, permohonan.UpdatedAt, id,
+		permohonan.NamaUsaha, permohonan.JenisUsaha, permohonan.AlamatUsaha, permohonan.AlamatTujuan,
+		permohonan.AlasanPindah, permohonan.NamaAyah, permohonan.NamaIbu, permohonan.TglKematian,
+		permohonan.PenyebabKematian,permohonan.Ditujukan, permohonan.Status, id,
 	)
 	if err != nil {
 		log.Println("Error updating permohonan surat:", err)
@@ -170,32 +227,30 @@ func (r *PermohonanSuratRepository) UpdatePermohonanSuratByID(id int64, permohon
 }
 
 func (r *PermohonanSuratRepository) UpdateStatusByID(id int64, status model.Status, updatedAt time.Time) error {
-    log.Printf("Updating status for ID %d to %s at %s", id, status, updatedAt.Format(time.RFC3339))
-    query := `
+	log.Printf("Updating status for ID %d to %s at %s", id, status, updatedAt.Format(time.RFC3339))
+	query := `
         UPDATE permohonansurat 
-        SET status = "Selesai", updated_at = ?
+        SET status = ?, updated_at = ?
         WHERE id = ?
     `
-    // Tes dengan nilai hard-coded untuk memastikan query bekerja
-    // result, err := r.db.Exec("UPDATE permohonansurat SET status = 'Selesai', updated_at = ? WHERE id = ?", updatedAt, id)
-    result, err := r.db.Exec(query, string(status), updatedAt, id) // Kembalikan ke ini setelah tes berhasil
-    if err != nil {
-        log.Println("Error updating permohonan surat status:", err)
-        return err
-    }
+	result, err := r.db.Exec(query, status, updatedAt, id)
+	if err != nil {
+		log.Println("Error updating permohonan surat status:", err)
+		return err
+	}
 
-    rowsAffected, err := result.RowsAffected()
-    if err != nil {
-        log.Println("Error checking rows affected:", err)
-        return err
-    }
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Println("Error checking rows affected:", err)
+		return err
+	}
 
-    log.Printf("Rows affected: %d", rowsAffected)
-    if rowsAffected == 0 {
-        return fmt.Errorf("tidak ada permohonan surat dengan ID %d yang ditemukan", id)
-    }
+	log.Printf("Rows affected: %d", rowsAffected)
+	if rowsAffected == 0 {
+		return fmt.Errorf("tidak ada permohonan surat dengan ID %d yang ditemukan", id)
+	}
 
-    return nil
+	return nil
 }
 
 func (r *PermohonanSuratRepository) DeletePermohonanSurat(id int64) error {

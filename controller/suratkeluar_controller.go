@@ -30,11 +30,6 @@ func AddSuratKeluar(db *sql.DB) httprouter.Handle {
 	}
 }
 
-func GetSuratKeluar(db *sql.DB) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		service.GetSuratKeluar(w, db)
-	}
-}
 
 // GetAllSuratKeluar menangani request untuk mendapatkan semua surat keluar
 func (c *SuratKeluarController) GetAllSuratKeluar(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

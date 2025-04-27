@@ -8,4 +8,6 @@ type SuratKeluar struct {
 	Ditujukan string `json:"ditujukan"`
 	Title     string `json:"title"`
 	File      string `json:"file"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
 }

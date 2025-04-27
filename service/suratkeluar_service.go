@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 )
 
@@ -82,20 +81,6 @@ func AddSuratKeluar(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	repository.AddSuratKeluar(db, w, r, surat, parsedDate)
 }
 
-func GetSuratKeluar(w http.ResponseWriter, db *sql.DB) {
-	suratKeluarList, err := repository.GetSuratKeluar(db)
-	if err != nil {
-		http.Error(w, `{"Error Message": "Error retrieving data"}`, http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	for _, surat := range suratKeluarList {
-		idStr := strconv.Itoa(surat.ID) // Konversi Id ke string
-		w.Write([]byte(`{"id":` + idStr + `,"nomor":"` + surat.Nomor + `","tanggal":"` + surat.Tanggal + `","perihal":"` + surat.Perihal + `","ditujukan":"` + surat.Ditujukan + `","title":"` + surat.Title + `","file":"` + surat.File + `"}`))
-	}
-}
 
 // GetAllSuratKeluar mengambil semua data surat keluar dari repository
 func (s *SuratKeluarService) GetAllSuratKeluar() ([]model.SuratKeluar, error) {

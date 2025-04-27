@@ -39,7 +39,7 @@ func (r *SuratMasukRepository) AddSuratMasuk(surat model.SuratMasuk, parsedDate 
 }
 
 func (r *SuratMasukRepository) GetSuratMasuk() ([]model.SuratMasuk, error) {
-	rows, err := r.db.Query("SELECT id, nomor, tanggal, perihal, asal, title, file FROM suratmasuk")
+	rows, err := r.db.Query("SELECT id, nomor, tanggal, perihal, asal, title, file FROM suratmasuk ORDER BY created_at DESC" )
 	if err != nil {
 		log.Println("Error retrieving surat masuk:", err)
 		return nil, err

@@ -30,54 +30,30 @@ func AddSuratKeluar(db *sql.DB, w http.ResponseWriter, r *http.Request, surat mo
 	w.Write([]byte(`{"message": "Surat Keluar created successfully"}`))
 }
 
-func GetSuratKeluar(db *sql.DB) ([]model.SuratKeluar, error) {
-	rows, err := db.Query("SELECT id, nomor, tanggal, perihal, ditujukan, title, file FROM suratkeluar")
-	if err != nil {
-		log.Println("Error retrieving surat keluar:", err)
-		return nil, err
-	}
-	defer rows.Close()
-
-	var suratKeluarList []model.SuratKeluar
-	for rows.Next() {
-		var surat model.SuratKeluar
-		if err := rows.Scan(&surat.ID, &surat.Nomor, &surat.Tanggal, &surat.Perihal, &surat.Ditujukan, &surat.Title, &surat.File); err != nil {
-			log.Println("Error scanning surat keluar row:", err)
-			return nil, err
-		}
-		suratKeluarList = append(suratKeluarList, surat)
-	}
-
-	if err := rows.Err(); err != nil {
-		log.Println("Error after retrieving surat keluar:", err)
-		return nil, err
-	}
-
-	return suratKeluarList, nil
-}
 
 // GetAllSuratKeluar mengambil semua data surat keluar dari database
 func (r *SuratKeluarRepository) GetAllSuratKeluar() ([]model.SuratKeluar, error) {
-	rows, err := r.db.Query("SELECT id, nomor, tanggal, perihal, ditujukan, title, file FROM suratkeluar")
+	// Tambahkan ORDER BY created_at DESC
+	rows, err := r.db.Query("SELECT id, nomor, tanggal, perihal, ditujukan, title, file FROM suratkeluar ORDER BY created_at DESC")
 	if err != nil {
-		log.Println("Error retrieving all surat keluar:", err)
-		return nil, err
+			log.Println("Error retrieving all surat keluar:", err)
+			return nil, err
 	}
 	defer rows.Close()
 
 	var suratKeluarList []model.SuratKeluar
 	for rows.Next() {
-		var surat model.SuratKeluar
-		if err := rows.Scan(&surat.ID, &surat.Nomor, &surat.Tanggal, &surat.Perihal, &surat.Ditujukan, &surat.Title, &surat.File); err != nil {
-			log.Println("Error scanning surat keluar row:", err)
-			return nil, err
-		}
-		suratKeluarList = append(suratKeluarList, surat)
+			var surat model.SuratKeluar
+			if err := rows.Scan(&surat.ID, &surat.Nomor, &surat.Tanggal, &surat.Perihal, &surat.Ditujukan, &surat.Title, &surat.File); err != nil {
+					log.Println("Error scanning surat keluar row:", err)
+					return nil, err
+			}
+			suratKeluarList = append(suratKeluarList, surat)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Println("Error after retrieving all surat keluar:", err)
-		return nil, err
+			log.Println("Error after retrieving all surat keluar:", err)
+			return nil, err
 	}
 
 	return suratKeluarList, nil
