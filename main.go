@@ -60,7 +60,6 @@ func main() {
 	router.ServeFiles("/static/*filepath", http.Dir("static"))
 	router.ServeFiles("/uploads/*filepath", http.Dir("uploads"))
 
-
 	// Permohonan Surat Routes
 	router.POST("/api/permohonansurat", permohonanSuratController.AddPermohonanSurat)
 	router.GET("/api/permohonansurat", permohonanSuratController.GetPermohonanSurat)
@@ -68,7 +67,6 @@ func main() {
 	router.PUT("/api/permohonansurat/update/:id", permohonanSuratController.UpdatePermohonanSuratByID)
 	router.DELETE("/api/permohonansurat/delete/:id", permohonanSuratController.DeletePermohonanSurat)
 	router.PATCH("/api/permohonansurat/patch/:id", permohonanSuratController.UpdateStatus)
-
 
 	// Surat Masuk Routes
 	router.POST("/api/suratmasuk", suratMasukController.AddSuratMasuk)
@@ -78,7 +76,7 @@ func main() {
 	router.DELETE("/api/suratmasuk/delete/:id", suratMasukController.DeleteSuratMasuk)
 
 	// Surat Keluar Routes
-	router.POST("/api/suratkeluar", controller.AddSuratKeluar(db))
+	router.POST("/api/suratkeluar", suratKeluarController.AddSuratKeluar)
 	router.GET("/api/suratkeluar", suratKeluarController.GetAllSuratKeluar)
 	router.GET("/api/suratkeluar/get/:id", suratKeluarController.GetSuratKeluarById)
 	router.PUT("/api/suratkeluar/update/:id", suratKeluarController.UpdateSuratKeluarByID)

@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type SuratKeluarService struct {
@@ -22,63 +23,40 @@ func NewSuratKeluarService(repo *repository.SuratKeluarRepository) *SuratKeluarS
 	return &SuratKeluarService{repo: repo}
 }
 
-func AddSuratKeluar(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	if r.Method != http.MethodPost {
-		http.Error(w, `{"Error Message": "Method Not Allowed"}`, http.StatusMethodNotAllowed)
-		return
+func (s *SuratKeluarService) AddSuratKeluar(surat *model.SuratKeluar, file io.Reader, fileName string) error {
+	// Validasi field
+	if surat.ID == 0 || surat.Nomor == "" || surat.Tanggal == "" || surat.Perihal == "" || surat.Ditujukan == "" || surat.Title == "" {
+		return fmt.Errorf("semua field wajib diisi")
+	}
+	if filepath.Ext(fileName) != ".pdf" {
+		return fmt.Errorf("file harus berupa PDF")
 	}
 
-	var surat model.SuratKeluar
-	surat.Nomor = r.FormValue("nomor")
-	surat.Tanggal = r.FormValue("tanggal")
-	surat.Perihal = r.FormValue("perihal")
-	surat.Ditujukan = r.FormValue("ditujukan")
-
-	if surat.Tanggal == "" {
-		http.Error(w, `{"Error Message": "Tanggal is required"}`, http.StatusBadRequest)
-		return
-	}
-
+	// Parse tanggal
 	parsedDate, err := time.Parse("2006-01-02", surat.Tanggal)
 	if err != nil {
-		http.Error(w, `{"Error Message": "Invalid date format (YYYY-MM-DD)"}`, http.StatusBadRequest)
-		return
+		return fmt.Errorf("format tanggal tidak valid: %v", err)
 	}
 
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, `{"Error Message": "Unable to get file from form"}`, http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
-
-	// Tentukan direktori penyimpanan
+	// Simpan file PDF
 	staticPath := "./static/suratkeluar/"
+	fileID := uuid.New().String()
+	filePath := filepath.Join(staticPath, fileID+filepath.Ext(fileName))
 	if err := os.MkdirAll(staticPath, os.ModePerm); err != nil {
-		http.Error(w, `{"Error Message": "Unable to create static directory"}`, http.StatusInternalServerError)
-		return
+		return fmt.Errorf("gagal membuat direktori: %v", err)
 	}
-
-	// Simpan file ke disk
-	filePath := filepath.Join(staticPath, header.Filename)
 	outFile, err := os.Create(filePath)
 	if err != nil {
-		http.Error(w, `{"Error Message": "Unable to create file"}`, http.StatusInternalServerError)
-		return
+		return fmt.Errorf("gagal membuat file: %v", err)
 	}
 	defer outFile.Close()
-
 	if _, err := io.Copy(outFile, file); err != nil {
-		http.Error(w, `{"Error Message": "Error saving file"}`, http.StatusInternalServerError)
-		return
+		return fmt.Errorf("gagal menyimpan file: %v", err)
 	}
-
-	// Simpan detail ke struct
-	surat.Title = header.Filename
 	surat.File = filePath
 
-	// Panggil repository (jika ingin diganti ke service, tinggal ubah)
-	repository.AddSuratKeluar(db, w, r, surat, parsedDate)
+	// Simpan ke repository
+	return s.repo.AddSuratKeluar(surat, parsedDate)
 }
 
 
@@ -111,8 +89,6 @@ func (s *SuratKeluarService) GetSuratKeluarById(id int) ([]model.SuratKeluar, er
 	return []model.SuratKeluar{*surat}, nil
 }
 
-
-
 // UpdateSuratKeluarByID memperbarui data surat keluar berdasarkan ID
 func (s *SuratKeluarService) UpdateSuratKeluarByID(id int, surat model.SuratKeluar) error {
 	err := s.repo.UpdateSuratKeluarByID(id, surat)
@@ -122,8 +98,6 @@ func (s *SuratKeluarService) UpdateSuratKeluarByID(id int, surat model.SuratKelu
 	}
 	return nil
 }
-
-
 
 func (s *SuratKeluarService) DeleteSuratKeluar(id int) error {
 	err := s.repo.DeleteSuratKeluar(id)

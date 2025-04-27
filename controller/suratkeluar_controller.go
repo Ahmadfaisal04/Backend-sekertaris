@@ -24,12 +24,51 @@ func NewSuratKeluarController(service *service.SuratKeluarService) *SuratKeluarC
 	return &SuratKeluarController{service: service}
 }
 
-func AddSuratKeluar(db *sql.DB) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		service.AddSuratKeluar(w, r, db)
+func (c *SuratKeluarController) AddSuratKeluar(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"message": "Method Not Allowed"}`, http.StatusMethodNotAllowed)
+		return
 	}
-}
 
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		http.Error(w, `{"message": "Gagal memproses form: "+err.Error()}`, http.StatusBadRequest)
+		return
+	}
+
+	idStr := r.FormValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, `{"message": "ID harus berupa angka"}`, http.StatusBadRequest)
+		return
+	}
+
+	surat := &model.SuratKeluar{
+		ID:        id,
+		Nomor:     r.FormValue("nomor"),
+		Tanggal:   r.FormValue("tanggal"),
+		Perihal:   r.FormValue("perihal"),
+		Ditujukan: r.FormValue("ditujukan"),
+		Title:     r.FormValue("title"),
+	}
+
+	file, fileHeader, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, `{"message": "Gagal mengambil file: "+err.Error()}`, http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	err = c.service.AddSuratKeluar(surat, file, fileHeader.Filename)
+	if err != nil {
+		http.Error(w, `{"message": "`+err.Error()+`"}`, http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Surat berhasil disimpan"})
+}
 
 // GetAllSuratKeluar menangani request untuk mendapatkan semua surat keluar
 func (c *SuratKeluarController) GetAllSuratKeluar(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -83,7 +122,6 @@ func (c *SuratKeluarController) GetSuratKeluarById(w http.ResponseWriter, r *htt
 		http.Error(w, `{"error": "Failed to process response"}`, http.StatusInternalServerError)
 	}
 }
-
 
 func (c *SuratKeluarController) UpdateSuratKeluarByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	idStr := ps.ByName("id")

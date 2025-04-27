@@ -1,7 +1,7 @@
 package model
 
 type SuratKeluar struct {
-	ID        int    `json:"id"`
+	ID        int `json:"id"`
 	Nomor     string `json:"nomor"`
 	Tanggal   string `json:"tanggal"`
 	Perihal   string `json:"perihal"`
