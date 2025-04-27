@@ -3,15 +3,10 @@ package controller
 import (
 	"Sekertaris/model"
 	"Sekertaris/service"
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"io"
-	"log"
 	"net/http"
-	"os"
 	"strconv"
-	"strings"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -25,26 +20,9 @@ func NewSuratKeluarController(service *service.SuratKeluarService) *SuratKeluarC
 }
 
 func (c *SuratKeluarController) AddSuratKeluar(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	if r.Method != http.MethodPost {
-		http.Error(w, `{"message": "Method Not Allowed"}`, http.StatusMethodNotAllowed)
-		return
-	}
-
-	err := r.ParseMultipartForm(10 << 20)
-	if err != nil {
-		http.Error(w, `{"message": "Gagal memproses form: "+err.Error()}`, http.StatusBadRequest)
-		return
-	}
-
-	idStr := r.FormValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, `{"message": "ID harus berupa angka"}`, http.StatusBadRequest)
-		return
-	}
+	r.ParseMultipartForm(10 << 20)
 
 	surat := &model.SuratKeluar{
-		ID:        id,
 		Nomor:     r.FormValue("nomor"),
 		Tanggal:   r.FormValue("tanggal"),
 		Perihal:   r.FormValue("perihal"),
@@ -54,189 +32,86 @@ func (c *SuratKeluarController) AddSuratKeluar(w http.ResponseWriter, r *http.Re
 
 	file, fileHeader, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, `{"message": "Gagal mengambil file: "+err.Error()}`, http.StatusBadRequest)
+		http.Error(w, "File wajib diupload", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
 
 	err = c.service.AddSuratKeluar(surat, file, fileHeader.Filename)
 	if err != nil {
-		http.Error(w, `{"message": "`+err.Error()+`"}`, http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Surat berhasil disimpan"})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Surat keluar berhasil ditambahkan"})
 }
 
-// GetAllSuratKeluar menangani request untuk mendapatkan semua surat keluar
 func (c *SuratKeluarController) GetAllSuratKeluar(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	suratKeluarList, err := c.service.GetAllSuratKeluar()
+	surat, err := c.service.GetAllSuratKeluar()
 	if err != nil {
-		log.Println("Error retrieving all surat keluar:", err)
-		http.Error(w, `{"error": "Error retrieving all surat keluar"}`, http.StatusInternalServerError)
+		http.Error(w, "Gagal mengambil data", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(suratKeluarList); err != nil {
-		log.Println("Error encoding JSON response:", err)
-		http.Error(w, `{"error": "Error processing request"}`, http.StatusInternalServerError)
-	}
+	json.NewEncoder(w).Encode(surat)
 }
 
-// GetSuratKeluarById menangani request untuk mendapatkan surat keluar berdasarkan ID
 func (c *SuratKeluarController) GetSuratKeluarById(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// Ambil ID dari parameter URL
-	idStr := ps.ByName("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		log.Printf("Invalid ID: %v", err)
-		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
-		return
-	}
+	id, _ := strconv.Atoi(ps.ByName("id"))
 
-	// Panggil service untuk mengambil data surat keluar
 	surat, err := c.service.GetSuratKeluarById(id)
 	if err != nil {
-		// Jika data tidak ditemukan
-		if strings.Contains(err.Error(), "tidak ditemukan") {
-			log.Printf("Surat keluar with ID %d not found: %v", id, err)
-			http.Error(w, `{"error": "Surat keluar not found"}`, http.StatusNotFound)
-			return
-		}
-
-		// Jika terjadi error lain
-		log.Printf("Error retrieving surat keluar by ID %d: %v", id, err)
-		http.Error(w, `{"error": "Failed to retrieve surat keluar"}`, http.StatusInternalServerError)
+		http.Error(w, "Data tidak ditemukan", http.StatusNotFound)
 		return
 	}
 
-	// Jika berhasil, kirim response JSON dalam bentuk array
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(surat); err != nil {
-		log.Printf("Error encoding JSON response for surat keluar ID %d: %v", id, err)
-		http.Error(w, `{"error": "Failed to process response"}`, http.StatusInternalServerError)
-	}
+	json.NewEncoder(w).Encode(surat)
 }
 
 func (c *SuratKeluarController) UpdateSuratKeluarByID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	idStr := ps.ByName("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		log.Println("Invalid ID:", err)
-		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
-		return
-	}
+	id, _ := strconv.Atoi(ps.ByName("id"))
 
-	// Parse form data
-	err = r.ParseMultipartForm(10 << 20) // 10 MB max
-	if err != nil {
-		log.Println("Error parsing form data:", err)
-		http.Error(w, `{"error": "Error parsing form data"}`, http.StatusBadRequest)
-		return
-	}
+	r.ParseMultipartForm(10 << 20)
 
-	// Ambil data dari form
-	surat := model.SuratKeluar{
+	surat := &model.SuratKeluar{
 		Nomor:     r.FormValue("nomor"),
 		Tanggal:   r.FormValue("tanggal"),
 		Perihal:   r.FormValue("perihal"),
 		Ditujukan: r.FormValue("ditujukan"),
 		Title:     r.FormValue("title"),
+		File:      r.FormValue("existing_file"),
 	}
 
-	// Handle file upload
-	file, handler, err := r.FormFile("file")
+	var file io.Reader
+	var fileName string
+
+	fileUpload, fileHeader, err := r.FormFile("file")
 	if err == nil {
-		defer file.Close()
-
-		// Buat direktori jika belum ada
-		staticPath := "./static/suratkeluar/"
-		err = os.MkdirAll(staticPath, os.ModePerm)
-		if err != nil {
-			log.Println("Error creating directory:", err)
-			http.Error(w, `{"error": "Error creating directory"}`, http.StatusInternalServerError)
-			return
-		}
-
-		// Buat file baru
-		filePath := staticPath + handler.Filename
-		dst, err := os.Create(filePath)
-		if err != nil {
-			log.Println("Error creating file:", err)
-			http.Error(w, `{"error": "Error creating file"}`, http.StatusInternalServerError)
-			return
-		}
-		defer dst.Close()
-
-		// Salin file
-		_, err = io.Copy(dst, file)
-		if err != nil {
-			log.Println("Error copying file:", err)
-			http.Error(w, `{"error": "Error copying file"}`, http.StatusInternalServerError)
-			return
-		}
-
-		// Set path file baru
-		surat.File = filePath
-		surat.Title = handler.Filename
-	} else {
-		// Jika tidak ada file baru diupload, gunakan file yang sudah ada
-		existingFile := r.FormValue("existing_file")
-		existingTitle := r.FormValue("existing_title")
-
-		if existingFile != "" {
-			surat.File = existingFile
-			surat.Title = existingTitle
-		}
+		file = fileUpload
+		fileName = fileHeader.Filename
+		defer fileUpload.Close()
 	}
 
-	// Update data
-	err = c.service.UpdateSuratKeluarByID(id, surat)
+	err = c.service.UpdateSuratKeluarByID(id, surat, file, fileName)
 	if err != nil {
-		log.Println("Error updating surat masuk:", err)
-		http.Error(w, `{"error": "Error updating surat masuk"}`, http.StatusInternalServerError)
+		http.Error(w, "Gagal update data", http.StatusInternalServerError)
 		return
 	}
 
-	// Response sukses
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Surat masuk updated successfully"})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Surat keluar berhasil diupdate"})
 }
 
 func (c *SuratKeluarController) DeleteSuratKeluar(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// Ambil ID dari parameter URL
-	idStr := ps.ByName("id")
-	id, err := strconv.Atoi(idStr)
+	id, _ := strconv.Atoi(ps.ByName("id"))
+
+	err := c.service.DeleteSuratKeluar(id)
 	if err != nil {
-		log.Println("Invalid ID:", err)
-		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
+		http.Error(w, "Gagal menghapus data", http.StatusInternalServerError)
 		return
 	}
 
-	// Panggil service untuk menghapus surat keluar
-	err = c.service.DeleteSuratKeluar(id)
-	if err != nil {
-		log.Println("Error deleting surat keluar:", err)
-
-		// Jika data tidak ditemukan
-		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, `{"error": "Surat keluar not found"}`, http.StatusNotFound)
-			return
-		}
-
-		// Jika terjadi error lain
-		http.Error(w, `{"error": "Failed to delete surat keluar"}`, http.StatusInternalServerError)
-		return
-	}
-
-	// Jika berhasil, kirim response JSON
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"message": "Surat keluar deleted successfully"}`))
+	json.NewEncoder(w).Encode(map[string]string{"message": "Surat keluar berhasil dihapus"})
 }

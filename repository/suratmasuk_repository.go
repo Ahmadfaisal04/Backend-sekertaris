@@ -29,7 +29,7 @@ func (r *SuratMasukRepository) AddSuratMasuk(surat model.SuratMasuk, parsedDate 
 	}
 
 	var newSurat model.SuratMasuk
-	query = `SELECT id, nomor, tanggal, perihal, asal, title, file FROM suratmasuk WHERE id = ?`
+	query = `SELECT nomor, tanggal, perihal, asal, title, file FROM suratmasuk WHERE id = ?`
 	err = r.db.QueryRow(query, lastInsertID).Scan(&newSurat.Id, &newSurat.Nomor, &newSurat.Tanggal, &newSurat.Perihal, &newSurat.Asal, &newSurat.Title, &newSurat.File)
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func (r *SuratMasukRepository) AddSuratMasuk(surat model.SuratMasuk, parsedDate 
 }
 
 func (r *SuratMasukRepository) GetSuratMasuk() ([]model.SuratMasuk, error) {
-	rows, err := r.db.Query("SELECT id, nomor, tanggal, perihal, asal, title, file FROM suratmasuk ORDER BY created_at DESC" )
+	rows, err := r.db.Query("SELECT nomor, tanggal, perihal, asal, title, file FROM suratmasuk ORDER BY created_at DESC" )
 	if err != nil {
 		log.Println("Error retrieving surat masuk:", err)
 		return nil, err
@@ -49,7 +49,7 @@ func (r *SuratMasukRepository) GetSuratMasuk() ([]model.SuratMasuk, error) {
 	var suratMasukList []model.SuratMasuk
 	for rows.Next() {
 		var surat model.SuratMasuk
-		if err := rows.Scan(&surat.Id, &surat.Nomor, &surat.Tanggal, &surat.Perihal, &surat.Asal, &surat.Title, &surat.File); err != nil {
+		if err := rows.Scan(&surat.Nomor, &surat.Tanggal, &surat.Perihal, &surat.Asal, &surat.Title, &surat.File); err != nil {
 			log.Println("Error scanning surat masuk row:", err)
 			return nil, err
 		}
