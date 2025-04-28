@@ -14,23 +14,23 @@ func ConnectDB() (db *sql.DB, err error) {
 	err = godotenv.Load()
 	if err != nil {
 		panic(err)
+
 	}
 
-	dbUser := os.Getenv("DB_USER")
-	dbPassword := os.Getenv("DB_PASSWORD")
-	dbHost := os.Getenv("DB_HOST")
 	dbName := os.Getenv("DB_NAME")
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", dbUser, dbPassword, dbHost, dbName)
+	mysql := fmt.Sprintf("root:@tcp(localhost:3306)/%s?parseTime=true", dbName)
 
-	db, err = sql.Open("mysql", dsn)
+	db, err = sql.Open("mysql", mysql)
 	if err != nil {
 		panic(err)
+
 	}
 
 	err = db.Ping()
 	if err != nil {
 		panic(err)
+
 	}
 
 	db.SetConnMaxLifetime(time.Minute * 3)

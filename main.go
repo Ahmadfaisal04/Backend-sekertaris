@@ -55,6 +55,7 @@ func main() {
 
 	// Setup router
 	router := httprouter.New()
+	router.HandleOPTIONS = true 
 
 	// Serve static files
 	router.ServeFiles("/static/*filepath", http.Dir("static"))
@@ -84,7 +85,12 @@ func main() {
 
 	// Enable CORS
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:5800"}, // Tambah semua kemungkinan origin
+		AllowedOrigins: []string{
+			"http://localhost:5800",
+			"http://192.168.1.7:5800",
+			"http://192.168.1.85:5800",
+		},
+		 // Tambah semua kemungkinan origin
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowedHeaders: []string{
 			"Content-Type",
@@ -110,7 +116,7 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		fmt.Printf("Server running on http://localhost:%s\n", port)
+		fmt.Printf("Server running on http://192.168.1.85:%s\n", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			panic(err)
 		}
