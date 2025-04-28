@@ -93,6 +93,7 @@ func main() {
 			"Accept",
 			"Origin",
 			"Content-Disposition",
+			"ngrok-skip-browser-warning",
 		},
 		AllowCredentials: true,
 		Debug:            true,
