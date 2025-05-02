@@ -50,7 +50,7 @@ type PermohonanSurat struct {
 	NamaIbu          sql.NullString `json:"nama_ibu"`
 	TglKematian      sql.NullTime   `json:"tgl_kematian"`
 	PenyebabKematian sql.NullString `json:"penyebab_kematian"`
-	Ditujukan        string         `json:"ditujukan"`
+	Ditujukan        sql.NullString `json:"ditujukan"`
 	Status           Status         `json:"status"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`

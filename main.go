@@ -116,7 +116,7 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		fmt.Printf("Server running on http://192.168.1.85:%s\n", port)
+		fmt.Printf("Server running on http://localhost:%s\n", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			panic(err)
 		}
