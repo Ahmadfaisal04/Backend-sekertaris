@@ -26,9 +26,7 @@ func (s *PermohonanSuratService) validatePermohonanSurat(data model.PermohonanSu
 	if data.TanggalLahir.IsZero() {
 		return fmt.Errorf("tanggal lahir wajib diisi")
 	}
-	if data.JenisKelamin != model.LakiLaki && data.JenisKelamin != model.Perempuan {
-		return fmt.Errorf("jenis kelamin harus 'Laki-laki' atau 'Perempuan'")
-	}
+
 	if data.JenisSurat == "" {
 		return fmt.Errorf("jenis surat wajib diisi")
 	}
@@ -52,14 +50,14 @@ func (s *PermohonanSuratService) validatePermohonanSurat(data model.PermohonanSu
 		}
 	}
 	// Validasi status
-	validStatuses := map[model.Status]bool{
-		model.Diproses: true,
-		model.Selesai:  true,
-		model.Ditolak:  true,
-	}
-	if data.Status != "" && !validStatuses[data.Status] {
-		return fmt.Errorf("status harus 'Diproses', 'Selesai', atau 'Ditolak'")
-	}
+	// validStatuses := map[model.Status]bool{
+	// 	model.Diproses: true,
+	// 	model.Selesai:  true,
+	// 	model.Ditolak:  true,
+	// }
+	// if data.Status != "" && !validStatuses[data.Status] {
+	// 	return fmt.Errorf("status harus 'Diproses', 'Selesai', atau 'Ditolak'")
+	// }
 	return nil
 }
 
