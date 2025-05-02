@@ -3,9 +3,9 @@ package service
 import (
 	"Sekertaris/model"
 	"Sekertaris/repository"
+	"encoding/json"
 	"fmt"
-	"log"
-	"time"
+	"strings"
 )
 
 type PermohonanSuratService struct {
@@ -23,165 +23,92 @@ func (s *PermohonanSuratService) validatePermohonanSurat(data model.PermohonanSu
 	if data.NamaLengkap == "" {
 		return fmt.Errorf("nama lengkap wajib diisi")
 	}
+	if data.TanggalLahir.IsZero() {
+		return fmt.Errorf("tanggal lahir wajib diisi")
+	}
 	if data.JenisKelamin != model.LakiLaki && data.JenisKelamin != model.Perempuan {
-		return fmt.Errorf("jenis kelamin harus Laki-laki atau Perempuan")
+		return fmt.Errorf("jenis kelamin harus 'Laki-laki' atau 'Perempuan'")
 	}
-	validStatuses := map[model.Status]bool{
-		model.Diproses: true,
-		model.Selesai:  true,
-		model.Ditolak:  true,
+	if data.JenisSurat == "" {
+		return fmt.Errorf("jenis surat wajib diisi")
 	}
-	if !validStatuses[data.Status] {
-		return fmt.Errorf("status harus salah satu dari: Diproses, Selesai, Ditolak")
-	}
-
-	// Validasi field unik berdasarkan jenis surat
-	switch data.JenisSurat {
-	case "Surat Keterangan Usaha":
+	// Validasi khusus berdasarkan jenis surat
+	switch strings.ToLower(data.JenisSurat) {
+	case "surat keterangan domisili":
+		if data.AlamatLengkap == "" {
+			return fmt.Errorf("alamat_lengkap wajib diisi untuk Surat Keterangan Domisili")
+		}
+	case "surat keterangan usaha":
 		if !data.NamaUsaha.Valid || !data.JenisUsaha.Valid || !data.AlamatUsaha.Valid {
 			return fmt.Errorf("nama_usaha, jenis_usaha, dan alamat_usaha wajib diisi untuk Surat Keterangan Usaha")
 		}
-	case "Surat Keterangan Pindah":
+	case "surat keterangan pindah":
 		if !data.AlamatTujuan.Valid || !data.AlasanPindah.Valid {
 			return fmt.Errorf("alamat_tujuan dan alasan_pindah wajib diisi untuk Surat Keterangan Pindah")
 		}
-	case "Surat Keterangan Kelahiran":
-		if !data.NamaAyah.Valid || !data.NamaIbu.Valid {
-			return fmt.Errorf("nama_ayah dan nama_ibu wajib diisi untuk Surat Keterangan Kelahiran")
-		}
-	case "Surat Keterangan Kematian":
+	case "surat keterangan kematian":
 		if !data.TglKematian.Valid || !data.PenyebabKematian.Valid {
 			return fmt.Errorf("tgl_kematian dan penyebab_kematian wajib diisi untuk Surat Keterangan Kematian")
 		}
 	}
+	// Validasi status
+	validStatuses := map[model.Status]bool{
+		model.Diproses: true,
+		model.Selesai:  true,
+		model.Ditolak:  true,
+	}
+	if data.Status != "" && !validStatuses[data.Status] {
+		return fmt.Errorf("status harus 'Diproses', 'Selesai', atau 'Ditolak'")
+	}
 	return nil
 }
 
-func (s *PermohonanSuratService) AddPermohonanSurat(permohonan model.PermohonanSurat) (*model.PermohonanSurat, error) {
-	// Validasi input
-	if err := s.validatePermohonanSurat(permohonan); err != nil {
-		log.Printf("Validation error adding permohonan surat: %v", err)
+func (s *PermohonanSuratService) AddPermohonanSuratJSON(data model.PermohonanSurat) ([]byte, error) {
+	if err := s.validatePermohonanSurat(data); err != nil {
 		return nil, err
 	}
-
-	// Set status default jika kosong
-	if permohonan.Status == "" {
-		permohonan.Status = model.Diproses
+	if data.Status == "" {
+		data.Status = model.Diproses
 	}
-
-	// Tidak perlu mengisi CreatedAt dan UpdatedAt, karena diatur otomatis oleh database
-	newPermohonan, err := s.repo.AddPermohonanSurat(permohonan)
+	id, err := s.repo.AddPermohonanSurat(data)
 	if err != nil {
-		log.Printf("Error adding permohonan surat: %v", err)
-		return nil, fmt.Errorf("gagal menambahkan permohonan surat: %v", err)
+		return nil, err
 	}
-	return newPermohonan, nil
+	data.ID = id
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling JSON: %v", err)
+	}
+	return jsonData, nil
 }
 
 func (s *PermohonanSuratService) GetPermohonanSurat() ([]model.PermohonanSurat, error) {
-	permohonanSuratList, err := s.repo.GetPermohonanSurat()
-	if err != nil {
-		log.Printf("Error retrieving permohonan surat: %v", err)
-		return nil, fmt.Errorf("gagal mengambil daftar permohonan surat: %v", err)
-	}
-	return permohonanSuratList, nil
+	return s.repo.GetPermohonanSurat()
 }
 
-func (s *PermohonanSuratService) GetPermohonanSuratByID(id int64) (*model.PermohonanSurat, error) {
-	if id <= 0 {
-		return nil, fmt.Errorf("ID harus lebih besar dari 0")
-	}
-
-	permohonan, err := s.repo.GetPermohonanSuratByID(id)
-	if err != nil {
-		log.Printf("Error retrieving permohonan surat by ID %d: %v", id, err)
-		return nil, fmt.Errorf("gagal mengambil permohonan surat dengan ID %d: %v", id, err)
-	}
-
-	return permohonan, nil
+func (s *PermohonanSuratService) GetPermohonanSuratByID(id int64) (model.PermohonanSurat, error) {
+	return s.repo.GetPermohonanSuratByID(id)
 }
 
-func (s *PermohonanSuratService) UpdatePermohonanSuratByID(id int64, permohonan model.PermohonanSurat) error {
-	if id <= 0 {
-		return fmt.Errorf("ID harus lebih besar dari 0")
-	}
-
-	// Validasi input
-	if err := s.validatePermohonanSurat(permohonan); err != nil {
-		log.Printf("Validation error updating permohonan surat: %v", err)
+func (s *PermohonanSuratService) UpdatePermohonanSurat(data model.PermohonanSurat) error {
+	if err := s.validatePermohonanSurat(data); err != nil {
 		return err
 	}
-
-	err := s.repo.UpdatePermohonanSuratByID(id, permohonan)
-	if err != nil {
-		log.Printf("Error updating permohonan surat with ID %d: %v", id, err)
-		return fmt.Errorf("gagal memperbarui permohonan surat dengan ID %d: %v", id, err)
-	}
-	return nil
+	return s.repo.UpdatePermohonanSurat(data)
 }
 
-func (s *PermohonanSuratService) UpdateStatusByID(id int64, status model.Status) error {
-	if id <= 0 {
-		return fmt.Errorf("ID harus lebih besar dari 0")
-	}
+func (s *PermohonanSuratService) DeletePermohonanSurat(id int64) error {
+	return s.repo.DeletePermohonanSurat(id)
+}
 
+func (s *PermohonanSuratService) UpdateStatus(id int64, status model.Status) error {
 	validStatuses := map[model.Status]bool{
 		model.Diproses: true,
 		model.Selesai:  true,
 		model.Ditolak:  true,
 	}
 	if !validStatuses[status] {
-		return fmt.Errorf("status harus salah satu dari: Diproses, Selesai, Ditolak")
+		return fmt.Errorf("status harus 'Diproses', 'Selesai', atau 'Ditolak'")
 	}
-
-	updatedAt := time.Now()
-	err := s.repo.UpdateStatusByID(id, status, updatedAt)
-	if err != nil {
-		log.Printf("Error updating status permohonan surat with ID %d: %v", id, err)
-		return fmt.Errorf("gagal memperbarui status permohonan surat dengan ID %d: %v", id, err)
-	}
-	return nil
-}
-
-func (s *PermohonanSuratService) ProcessNextPermohonan(status model.Status) error {
-	permohonan, err := s.repo.GetOldestPendingPermohonan()
-	if err != nil {
-		log.Printf("Error retrieving oldest pending permohonan: %v", err)
-		return fmt.Errorf("gagal mengambil permohonan tertua: %v", err)
-	}
-	if permohonan == nil {
-		return fmt.Errorf("tidak ada permohonan dengan status Diproses untuk diproses")
-	}
-
-	// Validasi status
-	validStatuses := map[model.Status]bool{
-		model.Selesai: true,
-		model.Ditolak: true,
-	}
-	if !validStatuses[status] {
-		return fmt.Errorf("status harus Selesai atau Ditolak untuk memproses permohonan")
-	}
-
-	// Update status permohonan tertua
-	err = s.UpdateStatusByID(permohonan.ID, status)
-	if err != nil {
-		log.Printf("Error processing permohonan ID %d: %v", permohonan.ID, err)
-		return fmt.Errorf("gagal memproses permohonan ID %d: %v", permohonan.ID, err)
-	}
-
-	log.Printf("Successfully processed permohonan ID %d with status %s", permohonan.ID, status)
-	return nil
-}
-
-func (s *PermohonanSuratService) DeletePermohonanSurat(id int64) error {
-	if id <= 0 {
-		return fmt.Errorf("ID harus lebih besar dari 0")
-	}
-
-	err := s.repo.DeletePermohonanSurat(id)
-	if err != nil {
-		log.Printf("Error deleting permohonan surat with ID %d: %v", id, err)
-		return fmt.Errorf("gagal menghapus permohonan surat dengan ID %d: %v", id, err)
-	}
-	return nil
+	return s.repo.UpdateStatus(id, status)
 }
