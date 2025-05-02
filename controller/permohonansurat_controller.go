@@ -259,17 +259,7 @@ func (c *PermohonanSuratController) UpdatePermohonanSuratByID(w http.ResponseWri
 		return
 	}
 
-	// Validasi JenisKelamin
-	if requestBody.JenisKelamin != string(model.LakiLaki) && requestBody.JenisKelamin != string(model.Perempuan) {
-		writeJSONResponse(w, http.StatusBadRequest, response{Error: "Jenis Kelamin harus 'Laki-laki' atau 'Perempuan'"})
-		return
-	}
 
-	// Validasi Status
-	if requestBody.Status != string(model.Diproses) && requestBody.Status != string(model.Selesai) && requestBody.Status != string(model.Ditolak) {
-		writeJSONResponse(w, http.StatusBadRequest, response{Error: "Status harus 'Diproses', 'Selesai', atau 'Ditolak'"})
-		return
-	}
 
 	// Mapping ke PermohonanSurat
 	permohonan := model.PermohonanSurat{
